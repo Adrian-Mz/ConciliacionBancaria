@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id             Int               @id @default(autoincrement())
+  nombre         String
+  correo         String            @unique
+  contraseña    String
+  rolId          Int
+  rol            Rol               @relation(fields: [rolId], references: [id])
+  cuentas        CuentaBancaria[] // Relación inversa
+  reportes       ReporteBancario[] // Relación inversa
+  conciliaciones Conciliacion[] // Relación inversa
+  auditoria      Auditoria[] // Relación inversa
+  createdAt      DateTime          @default(now())
+}
+
+model Rol {
+  id       Int       @id @default(autoincrement())
+  nombre   String    @unique
+  usuarios Usuario[]
+}
+
+model CuentaBancaria {
+  id              Int                   @id @default(autoincrement())
+  nombre          String
+  numero          String                @unique
+  banco           String
+  usuarioId       Int
+  usuario         Usuario               @relation(fields: [usuarioId], references: [id])
+  transacciones   TransaccionContable[] // Relación inversa
+  detallesReporte DetalleReporte[] // Relación inversa
+  createdAt       DateTime              @default(now())
+}
+
+model TransaccionContable {
+  id                    Int                   @id @default(autoincrement())
+  fecha                 DateTime
+  cuentaId              Int
+  cuenta                CuentaBancaria        @relation(fields: [cuentaId], references: [id])
+  descripcion           String
+  valor                 Decimal
+  saldo                 Decimal
+  referencia            String
+  detalleConciliaciones DetalleConciliacion[] // Relación inversa
+  createdAt             DateTime              @default(now())
+}
+
+model ReporteBancario {
+  id              Int              @id @default(autoincrement())
+  fechaSubida     DateTime         @default(now())
+  usuarioId       Int
+  usuario         Usuario          @relation(fields: [usuarioId], references: [id])
+  nombreArchivo   String
+  estadoId        Int
+  estado          Estado           @relation(fields: [estadoId], references: [id])
+  detallesReporte DetalleReporte[] // Relación inversa
+  createdAt       DateTime         @default(now())
+}
+
+model DetalleReporte {
+  id                    Int                   @id @default(autoincrement())
+  reporteId             Int
+  reporte               ReporteBancario       @relation(fields: [reporteId], references: [id])
+  fecha                 DateTime
+  cuentaId              Int
+  cuenta                CuentaBancaria        @relation(fields: [cuentaId], references: [id])
+  descripcion           String
+  valor                 Decimal
+  saldo                 Decimal
+  referencia            String
+  detalleConciliaciones DetalleConciliacion[] // Relación inversa
+  createdAt             DateTime              @default(now())
+}
+
+model Conciliacion {
+  id                   Int                   @id @default(autoincrement())
+  usuarioId            Int
+  usuario              Usuario               @relation(fields: [usuarioId], references: [id])
+  fecha                DateTime              @default(now())
+  estadoId             Int
+  estado               Estado                @relation(fields: [estadoId], references: [id])
+  detallesConciliacion DetalleConciliacion[] // Relación inversa
+  createdAt            DateTime              @default(now())
+}
+
+model DetalleConciliacion {
+  id               Int                 @id @default(autoincrement())
+  conciliacionId   Int
+  conciliacion     Conciliacion        @relation(fields: [conciliacionId], references: [id])
+  transaccionId    Int
+  transaccion      TransaccionContable @relation(fields: [transaccionId], references: [id])
+  detalleReporteId Int
+  detalleReporte   DetalleReporte      @relation(fields: [detalleReporteId], references: [id])
+  estadoId         Int
+  estado           Estado              @relation(fields: [estadoId], references: [id])
+  createdAt        DateTime            @default(now())
+}
+
+model Estado {
+  id                    Int                   @id @default(autoincrement())
+  nombre                String                @unique
+  reportes              ReporteBancario[]
+  conciliaciones        Conciliacion[]
+  detalleConciliaciones DetalleConciliacion[]
+}
+
+model Auditoria {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  fecha     DateTime @default(now())
+  accion    String
+}
