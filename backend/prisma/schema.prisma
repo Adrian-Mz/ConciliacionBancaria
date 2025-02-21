@@ -7,24 +7,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Rol {
+  id       Int       @id @default(autoincrement())
+  nombre   String    @unique
+  usuarios Usuario[] // 🔹 Relación inversa con Usuario
+}
+
 model Usuario {
   id             Int               @id @default(autoincrement())
   nombre         String
   correo         String            @unique
-  contraseña    String
+  contraseña     String
   rolId          Int
   rol            Rol               @relation(fields: [rolId], references: [id])
-  cuentas        CuentaBancaria[] // Relación inversa
+  cuentas        CuentaBancaria[]  // Relación inversa
   reportes       ReporteBancario[] // Relación inversa
-  conciliaciones Conciliacion[] // Relación inversa
-  auditoria      Auditoria[] // Relación inversa
+  conciliaciones Conciliacion[]    // Relación inversa
+  auditoria      Auditoria[]       // Relación inversa
+  estadosManuales EstadoCuentaManual[]  // 🔹 Agregamos relación inversa con EstadoCuentaManual
   createdAt      DateTime          @default(now())
 }
 
-model Rol {
-  id       Int       @id @default(autoincrement())
-  nombre   String    @unique
-  usuarios Usuario[]
+model EstadoCuentaManual {
+  id          Int               @id @default(autoincrement())
+  fecha       DateTime
+  cuentaId    Int
+  cuenta      CuentaBancaria    @relation(fields: [cuentaId], references: [id])
+  descripcion String
+  valor       Decimal
+  saldo       Decimal
+  referencia  String
+  usuarioId   Int
+  usuario     Usuario          @relation(fields: [usuarioId], references: [id]) // 🔹 Relación inversa con Usuario
+  detalleConciliaciones DetalleConciliacion[]  // 🔹 Agregamos la relación inversa con DetalleConciliacion
+  verificado  Boolean          @default(false) // Auditor revisa si es correcto
+  createdAt   DateTime         @default(now())
 }
 
 model CuentaBancaria {
@@ -34,22 +51,9 @@ model CuentaBancaria {
   banco           String
   usuarioId       Int
   usuario         Usuario               @relation(fields: [usuarioId], references: [id])
-  transacciones   TransaccionContable[] // Relación inversa
-  detallesReporte DetalleReporte[] // Relación inversa
+  estadosManuales EstadoCuentaManual[]  // Relación inversa con la nueva tabla
+  detallesReporte DetalleReporte[]      // Relación inversa
   createdAt       DateTime              @default(now())
-}
-
-model TransaccionContable {
-  id                    Int                   @id @default(autoincrement())
-  fecha                 DateTime
-  cuentaId              Int
-  cuenta                CuentaBancaria        @relation(fields: [cuentaId], references: [id])
-  descripcion           String
-  valor                 Decimal
-  saldo                 Decimal
-  referencia            String
-  detalleConciliaciones DetalleConciliacion[] // Relación inversa
-  createdAt             DateTime              @default(now())
 }
 
 model ReporteBancario {
@@ -72,9 +76,9 @@ model DetalleReporte {
   cuentaId              Int
   cuenta                CuentaBancaria        @relation(fields: [cuentaId], references: [id])
   descripcion           String
-  valor                 Decimal
-  saldo                 Decimal
-  referencia            String
+  valor                Decimal
+  saldo                Decimal
+  referencia           String
   detalleConciliaciones DetalleConciliacion[] // Relación inversa
   createdAt             DateTime              @default(now())
 }
@@ -91,16 +95,16 @@ model Conciliacion {
 }
 
 model DetalleConciliacion {
-  id               Int                 @id @default(autoincrement())
-  conciliacionId   Int
-  conciliacion     Conciliacion        @relation(fields: [conciliacionId], references: [id])
-  transaccionId    Int
-  transaccion      TransaccionContable @relation(fields: [transaccionId], references: [id])
-  detalleReporteId Int
-  detalleReporte   DetalleReporte      @relation(fields: [detalleReporteId], references: [id])
-  estadoId         Int
-  estado           Estado              @relation(fields: [estadoId], references: [id])
-  createdAt        DateTime            @default(now())
+  id                Int                 @id @default(autoincrement())
+  conciliacionId    Int
+  conciliacion      Conciliacion        @relation(fields: [conciliacionId], references: [id])
+  estadoManualId    Int
+  estadoManual      EstadoCuentaManual  @relation(fields: [estadoManualId], references: [id]) // 🔹 Relación con EstadoCuentaManual
+  detalleReporteId  Int
+  detalleReporte    DetalleReporte      @relation(fields: [detalleReporteId], references: [id]) // Relación con los valores del banco
+  estadoId          Int
+  estado            Estado              @relation(fields: [estadoId], references: [id])
+  createdAt         DateTime            @default(now())
 }
 
 model Estado {
