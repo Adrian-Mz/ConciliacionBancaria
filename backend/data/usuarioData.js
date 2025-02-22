@@ -9,6 +9,10 @@ export const UsuarioData = {
     return await prisma.usuario.findUnique({ where: { id }, include: { rol: true } });
   },
 
+  async getUsuarioByCorreo(correo) { // 🔹 Agregamos la función aquí
+    return await prisma.usuario.findUnique({ where: { correo } });
+  },
+
   async createUsuario(data) {
     return await prisma.usuario.create({ data });
   },

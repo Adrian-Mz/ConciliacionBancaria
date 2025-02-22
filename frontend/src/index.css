@@ -1,0 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+/* Aplicamos la fuente globalmente */
+:root {
+  --font-sans: 'Onest', sans-serif; /* Forma recomendada en Tailwind 4 */
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: white;
+  color: black;
+}
