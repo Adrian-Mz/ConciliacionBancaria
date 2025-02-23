@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usuarioAPI } from "../../api/api.usuarios";
 import { useNavigate } from "react-router-dom";
 
@@ -8,25 +8,37 @@ export default function Login() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // 🔹 Si ya hay usuario en localStorage, redirigir directamente al dashboard
+    const user = localStorage.getItem("user");
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
     try {
       const data = await usuarioAPI.login(correo, password);
-      console.log("Datos del usuario recibido:", data); // 🔹 Verifica qué datos devuelve el backend
+      console.log("Datos del usuario recibido:", data);
 
       if (data && data.usuario) {
+        // 🔹 Guardamos usuario y token
         localStorage.setItem("user", JSON.stringify(data.usuario));
         localStorage.setItem("token", data.token);
-        console.log("Usuario guardado en localStorage:", localStorage.getItem("user")); // 🔹 Verifica si se guarda bien
+        
+        console.log("Usuario guardado en localStorage:", localStorage.getItem("user"));
+
+        // 🔹 Redirigir al dashboard
         navigate("/dashboard");
       } else {
-        console.log("Error: Datos inválidos recibidos del backend");
+        setError("Credenciales incorrectas");
       }
     } catch (error) {
       console.log("Error al autenticar:", error);
-      setError("Credenciales incorrectas");
+      setError("Error en la autenticación");
     }
   };
 

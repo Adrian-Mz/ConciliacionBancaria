@@ -9,7 +9,7 @@ export const UsuarioData = {
     return await prisma.usuario.findUnique({ where: { id }, include: { rol: true } });
   },
 
-  async getUsuarioByCorreo(correo) { // 🔹 Agregamos la función aquí
+  async getUsuarioByCorreo(correo) {
     return await prisma.usuario.findUnique({ where: { correo } });
   },
 

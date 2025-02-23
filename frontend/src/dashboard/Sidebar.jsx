@@ -1,5 +1,5 @@
 import { useState } from "react";
-import PropTypes from "prop-types"; // 👈 Importamos PropTypes
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaClipboardList } from "react-icons/fa";
 
@@ -23,7 +23,6 @@ const Sidebar = ({ rolId }) => {
           {isOpen && <span>Dashboard</span>}
         </Link>
 
-        {/* Solo el Admin (rolId === 1) puede ver Gestión de Usuarios */}
         {rolId === 1 && (
           <Link to="/usuarios" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
             <FaUsers className="w-6 h-6" />
@@ -31,13 +30,11 @@ const Sidebar = ({ rolId }) => {
           </Link>
         )}
 
-        {/* Todos pueden ver Conciliaciones */}
         <Link to="/conciliaciones" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
           <FaClipboardList className="w-6 h-6" />
           {isOpen && <span>Conciliaciones</span>}
         </Link>
 
-        {/* Admin (rolId === 1) y Contador (rolId === 3) pueden ver Configuración */}
         {(rolId === 1 || rolId === 3) && (
           <Link to="/configuracion" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
             <FaCog className="w-6 h-6" />
@@ -47,7 +44,7 @@ const Sidebar = ({ rolId }) => {
       </nav>
 
       {/* Cerrar Sesión */}
-      <Link to="/logout" className="flex items-center space-x-2 p-3 hover:bg-red-700 rounded">
+      <Link to="/" className="flex items-center space-x-2 p-3 hover:bg-red-700 rounded">
         <FaSignOutAlt className="w-6 h-6" />
         {isOpen && <span>Cerrar Sesión</span>}
       </Link>
@@ -55,7 +52,6 @@ const Sidebar = ({ rolId }) => {
   );
 };
 
-// ✅ Validación de Props con PropTypes
 Sidebar.propTypes = {
   rolId: PropTypes.number.isRequired,
 };
