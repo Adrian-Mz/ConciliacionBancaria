@@ -11,5 +11,20 @@ export const RolData = {
 
   async createRol(data) {
     return await prisma.rol.create({ data });
-  }
+  },
+
+  async updateRol(id, data) {
+    return await prisma.rol.update({
+      where: { id: parseInt(id) }, // 👈 Convierte `id` a número
+      data,
+    });
+  },
+
+
+  // 🟢 Eliminar un rol por su ID
+  async deleteRol(id) {
+    return await prisma.rol.delete({
+      where: { id },
+    });
+  },
 };

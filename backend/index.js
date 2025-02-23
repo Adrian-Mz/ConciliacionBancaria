@@ -11,11 +11,18 @@ import conciliacionRoutes from "./routes/conciliacionRoutes.js";
 import auditorRoutes from "./routes/auditorRoutes.js";
 import directorRoutes from "./routes/directorRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import estadoRoutes from "./routes/estadoRoutes.js";  // 🔹 Agregado
+import estadoCuentaManualRoutes from "./routes/estadoCuentaManualRoutes.js";  // 🔹 Agregado
+
+dotenv.config(); // 🔹 Cargar variables de entorno
 
 const app = express();
+const PORT = process.env.PORT || 3000; // 🔹 Definir puerto por defecto
+
 app.use(cors());
 app.use(express.json());
 
+// ✅ Rutas del backend
 app.use("/auth", authRoutes);
 app.use("/usuarios", usuarioRoutes);
 app.use("/roles", rolRoutes);
@@ -25,8 +32,16 @@ app.use("/reportes", reporteRoutes);
 app.use("/conciliaciones", conciliacionRoutes);
 app.use("/auditor", auditorRoutes);
 app.use("/director", directorRoutes);
+app.use("/estados", estadoRoutes);  // 🔹 Agregado
+app.use("/estado-cuenta-manual", estadoCuentaManualRoutes);  // 🔹 Agregado
 
+// ✅ Middleware para manejar errores globales
+app.use((err, req, res, next) => {
+  console.error("Error detectado:", err.message);
+  res.status(500).json({ error: "Error interno del servidor" });
+});
 
-app.listen(process.env.PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${process.env.PORT}`);
+// ✅ Iniciar el servidor
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });

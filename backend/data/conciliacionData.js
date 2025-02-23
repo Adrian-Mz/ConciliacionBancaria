@@ -2,11 +2,23 @@ import prisma from "./prisma.js";
 
 export const ConciliacionData = {
   async getAllConciliaciones() {
-    return await prisma.conciliacion.findMany({ include: { usuario: true, estado: true } });
+    return await prisma.conciliacion.findMany({ 
+      include: { 
+        usuario: true, 
+        estado: true,
+        detallesConciliacion: { 
+          include: { estadoManual: true, detalleReporte: true } 
+        } 
+      }
+    });
+    
   },
 
   async getConciliacionById(id) {
-    return await prisma.conciliacion.findUnique({ where: { id }, include: { usuario: true, estado: true } });
+    return await prisma.conciliacion.findUnique({ 
+      where: { id }, 
+      include: { usuario: true, estado: true } 
+    });
   },
 
   async createConciliacion(data) {

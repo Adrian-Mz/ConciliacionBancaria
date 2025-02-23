@@ -10,7 +10,7 @@ datasource db {
 model Rol {
   id       Int       @id @default(autoincrement())
   nombre   String    @unique
-  usuarios Usuario[] // 🔹 Relación inversa con Usuario
+  usuarios Usuario[]
 }
 
 model Usuario {
@@ -20,11 +20,18 @@ model Usuario {
   contraseña     String
   rolId          Int
   rol            Rol               @relation(fields: [rolId], references: [id])
-  cuentas        CuentaBancaria[]  // Relación inversa
-  reportes       ReporteBancario[] // Relación inversa
-  conciliaciones Conciliacion[]    // Relación inversa
-  auditoria      Auditoria[]       // Relación inversa
-  estadosManuales EstadoCuentaManual[]  // 🔹 Agregamos relación inversa con EstadoCuentaManual
+  
+  // Relaciones con Conciliaciones
+  conciliacionesCreadas  Conciliacion[] @relation(name: "UsuarioCreador")  
+  auditoriasRealizadas   Conciliacion[] @relation(name: "UsuarioAuditor")  
+  decisionesTomadas      Conciliacion[] @relation(name: "UsuarioDirector") 
+
+  cuentas        CuentaBancaria[]  
+  reportes       ReporteBancario[] 
+  auditoria      Auditoria[]       
+  estadosManuales EstadoCuentaManual[]  
+  notificaciones Notificacion[]  
+
   createdAt      DateTime          @default(now())
 }
 
@@ -33,15 +40,27 @@ model EstadoCuentaManual {
   fecha       DateTime
   cuentaId    Int
   cuenta      CuentaBancaria    @relation(fields: [cuentaId], references: [id])
-  descripcion String
-  valor       Decimal
-  saldo       Decimal
-  referencia  String
   usuarioId   Int
-  usuario     Usuario          @relation(fields: [usuarioId], references: [id]) // 🔹 Relación inversa con Usuario
-  detalleConciliaciones DetalleConciliacion[]  // 🔹 Agregamos la relación inversa con DetalleConciliacion
-  verificado  Boolean          @default(false) // Auditor revisa si es correcto
-  createdAt   DateTime         @default(now())
+  usuario     Usuario           @relation(fields: [usuarioId], references: [id])
+  verificado  Boolean           @default(false) 
+  createdAt   DateTime          @default(now())
+
+  // 🔹 Relación inversa con DetalleConciliacion
+  detalleConciliaciones DetalleConciliacion[] @relation("EstadoCuentaManual_Conciliaciones")
+
+  // 🔹 Relación inversa con EstadoCuentaManualDetalle
+  detalles EstadoCuentaManualDetalle[] @relation("EstadoCuentaManualDetalles")
+}
+
+model EstadoCuentaManualDetalle {
+  id                   Int               @id @default(autoincrement())
+  estadoCuentaManualId Int
+  estadoCuentaManual   EstadoCuentaManual @relation(name: "EstadoCuentaManualDetalles", fields: [estadoCuentaManualId], references: [id])
+  descripcion          String
+  valor                Decimal
+  saldo                Decimal
+  referencia           String
+  createdAt            DateTime         @default(now())
 }
 
 model CuentaBancaria {
@@ -51,8 +70,8 @@ model CuentaBancaria {
   banco           String
   usuarioId       Int
   usuario         Usuario               @relation(fields: [usuarioId], references: [id])
-  estadosManuales EstadoCuentaManual[]  // Relación inversa con la nueva tabla
-  detallesReporte DetalleReporte[]      // Relación inversa
+  estadosManuales EstadoCuentaManual[]  
+  detallesReporte DetalleReporte[]      
   createdAt       DateTime              @default(now())
 }
 
@@ -64,7 +83,7 @@ model ReporteBancario {
   nombreArchivo   String
   estadoId        Int
   estado          Estado           @relation(fields: [estadoId], references: [id])
-  detallesReporte DetalleReporte[] // Relación inversa
+  detallesReporte DetalleReporte[] 
   createdAt       DateTime         @default(now())
 }
 
@@ -79,18 +98,26 @@ model DetalleReporte {
   valor                Decimal
   saldo                Decimal
   referencia           String
-  detalleConciliaciones DetalleConciliacion[] // Relación inversa
+  detalleConciliaciones DetalleConciliacion[] 
   createdAt             DateTime              @default(now())
 }
 
 model Conciliacion {
   id                   Int                   @id @default(autoincrement())
   usuarioId            Int
-  usuario              Usuario               @relation(fields: [usuarioId], references: [id])
+  usuario              Usuario               @relation(name: "UsuarioCreador", fields: [usuarioId], references: [id])
   fecha                DateTime              @default(now())
   estadoId             Int
   estado               Estado                @relation(fields: [estadoId], references: [id])
-  detallesConciliacion DetalleConciliacion[] // Relación inversa
+  detallesConciliacion DetalleConciliacion[]
+
+  auditorId            Int?                  
+  auditor              Usuario?              @relation(name: "UsuarioAuditor", fields: [auditorId], references: [id])
+
+  directorId           Int?                  
+  director             Usuario?              @relation(name: "UsuarioDirector", fields: [directorId], references: [id])
+
+  observaciones        String?
   createdAt            DateTime              @default(now())
 }
 
@@ -98,10 +125,13 @@ model DetalleConciliacion {
   id                Int                 @id @default(autoincrement())
   conciliacionId    Int
   conciliacion      Conciliacion        @relation(fields: [conciliacionId], references: [id])
+  
   estadoManualId    Int
-  estadoManual      EstadoCuentaManual  @relation(fields: [estadoManualId], references: [id]) // 🔹 Relación con EstadoCuentaManual
+  estadoManual      EstadoCuentaManual  @relation(name: "EstadoCuentaManual_Conciliaciones", fields: [estadoManualId], references: [id])
+  
   detalleReporteId  Int
-  detalleReporte    DetalleReporte      @relation(fields: [detalleReporteId], references: [id]) // Relación con los valores del banco
+  detalleReporte    DetalleReporte      @relation(fields: [detalleReporteId], references: [id])
+  
   estadoId          Int
   estado            Estado              @relation(fields: [estadoId], references: [id])
   createdAt         DateTime            @default(now())
@@ -121,4 +151,13 @@ model Auditoria {
   usuario   Usuario  @relation(fields: [usuarioId], references: [id])
   fecha     DateTime @default(now())
   accion    String
+}
+
+model Notificacion {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  mensaje    String
+  leida      Boolean  @default(false) 
+  createdAt  DateTime @default(now())
 }
