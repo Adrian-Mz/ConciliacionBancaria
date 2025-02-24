@@ -52,7 +52,7 @@ model CuentaBancaria {
 model MovimientosCuenta {
   id                  Int                   @id @default(autoincrement())
   cuentaId            Int
-  cuenta              CuentaBancaria        @relation(fields: [cuentaId], references: [id])
+  cuenta              CuentaBancaria        @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
   usuarioId           Int
   usuario             Usuario               @relation(fields: [usuarioId], references: [id])
   detalles            MovimientoDetalle[]
@@ -76,7 +76,7 @@ model MovimientoDetalle {
 model LibroMayor {
   id                  Int                   @id @default(autoincrement())
   cuentaId            Int
-  cuenta              CuentaBancaria        @relation(fields: [cuentaId], references: [id])
+  cuenta              CuentaBancaria        @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
   usuarioId           Int
   usuario             Usuario               @relation(fields: [usuarioId], references: [id])
   fechaOperacion      DateTime

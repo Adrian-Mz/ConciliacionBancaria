@@ -7,6 +7,8 @@ const CuentasBancariasPage = () => {
   const [cuentas, setCuentas] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState(false);
+  const [modalConfirmOpen, setModalConfirmOpen] = useState(false);
+  const [cuentaAEliminar, setCuentaAEliminar] = useState(null);
   const [cuentaActual, setCuentaActual] = useState({
     id: null,
     nombre: "",
@@ -77,15 +79,22 @@ const CuentasBancariasPage = () => {
     setModalOpen(true);
   };
 
-  const handleEliminar = async (id) => {
-    if (window.confirm("¿Seguro que deseas eliminar esta cuenta bancaria?")) {
-      try {
-        await cuentaBancariaAPI.deleteCuenta(id);
-        cargarCuentas();
-      } catch (error) {
-        console.error("Error al eliminar cuenta bancaria:", error);
-      }
+  const handleEliminar = async () => {
+    if (!cuentaAEliminar) return;
+    try {
+      await cuentaBancariaAPI.deleteCuenta(cuentaAEliminar.id);
+      cargarCuentas();
+    } catch (error) {
+      console.error("Error al eliminar cuenta bancaria:", error);
+    } finally {
+      setModalConfirmOpen(false);
+      setCuentaAEliminar(null);
     }
+  };
+
+  const handleConfirmarEliminar = (cuenta) => {
+    setCuentaAEliminar(cuenta);
+    setModalConfirmOpen(true);
   };
 
   const handleCerrarModal = () => {
@@ -133,7 +142,7 @@ const CuentasBancariasPage = () => {
                 <button className="text-yellow-600" onClick={() => handleEditar(cuenta)}>
                   <FaEdit />
                 </button>
-                <button className="text-red-600" onClick={() => handleEliminar(cuenta.id)}>
+                <button className="text-red-600" onClick={() => handleConfirmarEliminar(cuenta)}>
                   <FaTrash />
                 </button>
               </td>
@@ -144,7 +153,14 @@ const CuentasBancariasPage = () => {
 
       {modalOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50">
-          <motion.div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">{editando ? "Editar Cuenta" : "Agregar Cuenta"}</h2>
               <button onClick={handleCerrarModal} className="text-gray-500 hover:text-gray-800">
@@ -205,6 +221,40 @@ const CuentasBancariasPage = () => {
                 Cancelar
               </button>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {modalConfirmOpen && cuentaAEliminar && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md border border-gray-300"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold">Confirmar Eliminación</h2>
+              <button onClick={() => setModalConfirmOpen(false)} className="text-gray-500 hover:text-gray-800">
+                <FaTimes />
+              </button>
+            </div>
+            <p className="text-gray-600">¿Estás seguro de que deseas eliminar la cuenta bancaria <strong>{cuentaAEliminar.nombre}</strong>?</p>
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => setModalConfirmOpen(false)}
+                className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleEliminar}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+              >
+                Eliminar
+              </button>
+            </div>
           </motion.div>
         </div>
       )}

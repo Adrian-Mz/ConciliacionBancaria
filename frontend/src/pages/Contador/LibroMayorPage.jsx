@@ -270,7 +270,14 @@ const LibroMayorPage = () => {
       {/* Modal de Registro */}
       {modalOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50">
-            <motion.div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl">
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl"
+                onClick={(e) => e.stopPropagation()}
+            >
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold mb-4">Agregar Registro</h2>
                 <button 

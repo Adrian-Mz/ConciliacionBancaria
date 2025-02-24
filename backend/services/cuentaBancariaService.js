@@ -1,4 +1,5 @@
 import { CuentaBancariaData } from "../data/cuentaBancariaData.js";
+import prisma from "../data/prisma.js";
  
 export const CuentaBancariaService = {
   async getAllCuentas() {
@@ -37,7 +38,28 @@ export const CuentaBancariaService = {
   },
  
   async deleteCuenta(id) {
-    if (!id || isNaN(id)) throw new Error("ID inválido");
-    return await CuentaBancariaData.deleteCuenta(id);
+    if (!id || isNaN(id)) throw new Error("ID inválido.");
+ 
+    return await prisma.$transaction(async (tx) => {
+        // 🔹 1. Verificar si la cuenta existe
+        const cuenta = await tx.cuentaBancaria.findUnique({
+            where: { id },
+            include: {
+                movimientos: { select: { id: true } },
+                librosMayor: { select: { id: true } }
+            }
+        });
+ 
+        if (!cuenta) {
+            throw new Error("Cuenta bancaria no encontrada.");
+        }
+ 
+        // 🔹 2. Eliminar la cuenta (y automáticamente sus movimientos y libros mayor)
+        await tx.cuentaBancaria.delete({ where: { id } });
+ 
+        console.log(`✅ Cuenta eliminada junto con sus movimientos y registros en el libro mayor.`);
+ 
+        return { message: "Cuenta bancaria eliminada correctamente." };
+    });
   }
 };

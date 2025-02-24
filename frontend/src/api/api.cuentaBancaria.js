@@ -15,4 +15,9 @@ export const cuentaBancariaAPI = {
     const response = await api.post("/cuentas", data);
     return response.data;
   },
+
+  deleteCuenta: async (id) => {
+    const response = await api.delete(`/cuentas/${id}`);
+    return response.data;
+  },
 };

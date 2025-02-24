@@ -1,7 +1,19 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
-import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaClipboardList } from "react-icons/fa";
+import { 
+  FaHome, 
+  FaUsers, 
+  FaCog, 
+  FaSignOutAlt, 
+  FaUniversity, 
+  FaExchangeAlt, 
+  FaBook, 
+  FaBalanceScale, 
+  FaCheckDouble,
+  FaClipboardCheck,
+  FaClipboardList
+} from "react-icons/fa";
 
 const Sidebar = ({ rolId }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -39,19 +51,19 @@ const Sidebar = ({ rolId }) => {
         {rolId === 4 && (
           <>
             <Link to="/cuentas-bancarias" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
-              <FaClipboardList className="w-6 h-6" />
+              <FaUniversity className="w-6 h-6" />
               {isOpen && <span>Cuentas Bancarias</span>}
             </Link>
             <Link to="/estados-cuenta" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
-              <FaClipboardList className="w-6 h-6" />
+              <FaExchangeAlt className="w-6 h-6" />
               {isOpen && <span>Movimientos Cuenta Bancaria</span>}
             </Link>
             <Link to="/libros-mayor" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
-              <FaClipboardList className="w-6 h-6" />
+              <FaBook className="w-6 h-6" />
               {isOpen && <span>Libros Mayor</span>}
             </Link>
             <Link to="/generar-conciliacion" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
-              <FaClipboardList className="w-6 h-6" />
+              <FaBalanceScale className="w-6 h-6" />
               {isOpen && <span>Generar Conciliación</span>}
             </Link>
 
@@ -60,14 +72,14 @@ const Sidebar = ({ rolId }) => {
 
         {rolId === 2 && (
           <Link to="/revisar-conciliaciones" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
-            <FaClipboardList className="w-6 h-6" />
+            <FaClipboardCheck className="w-6 h-6" />
             {isOpen && <span>Revisar Conciliaciones</span>}
           </Link>
         )}
 
         {rolId === 3 && (
           <Link to="/aprobar-conciliaciones" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
-            <FaClipboardList className="w-6 h-6" />
+            <FaCheckDouble className="w-6 h-6" />
             {isOpen && <span>Aprobar Conciliaciones</span>}
           </Link>
         )}
