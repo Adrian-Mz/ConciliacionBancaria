@@ -14,123 +14,116 @@ model Rol {
 }
 
 model Usuario {
-  id             Int               @id @default(autoincrement())
-  nombre         String
-  correo         String            @unique
-  contraseña     String
-  rolId          Int
-  rol            Rol               @relation(fields: [rolId], references: [id])
+  id          Int    @id @default(autoincrement())
+  nombre      String
+  correo      String @unique
+  contraseña String
+  rolId       Int
+  rol         Rol    @relation(fields: [rolId], references: [id])
 
-  // Relaciones con Conciliaciones
-  conciliacionesCreadas  Conciliacion[] @relation(name: "UsuarioCreador")  
-  auditoriasRealizadas   Conciliacion[] @relation(name: "UsuarioAuditor")  
-  decisionesTomadas      Conciliacion[] @relation(name: "UsuarioDirector") 
+  conciliacionesCreadas Conciliacion[] @relation(name: "UsuarioCreador")
+  auditoriasRealizadas  Conciliacion[] @relation(name: "UsuarioAuditor")
+  decisionesTomadas     Conciliacion[] @relation(name: "UsuarioDirector")
 
-  cuentas        CuentaBancaria[]  
-  reportes       ReporteBancario[] 
-  auditoria      Auditoria[]       
+  cuentas        CuentaBancaria[]
+  auditoria      Auditoria[]
   notificaciones Notificacion[]
   movimientos    MovimientosCuenta[]
+  librosMayor    LibroMayor[]
 
-  createdAt      DateTime          @default(now())
+  createdAt DateTime @default(now())
 }
 
 model CuentaBancaria {
-  id              Int                   @id @default(autoincrement())
-  nombre          String
-  numero          String                @unique
-  banco           String
-  saldo           Decimal                @default(0.00) // 🔹 Se añade saldo inicial
-  usuarioId       Int
-  usuario         Usuario               @relation(fields: [usuarioId], references: [id])
-  movimientos     MovimientosCuenta[]    // 🔹 Relación con los movimientos de la cuenta
-  detallesReporte DetalleReporte[]      
-  createdAt       DateTime              @default(now())
+  id          Int                 @id @default(autoincrement())
+  nombre      String
+  numero      String              @unique
+  banco       String
+  saldo       Decimal             @default(0.0)
+  usuarioId   Int
+  usuario     Usuario             @relation(fields: [usuarioId], references: [id])
+  movimientos MovimientosCuenta[] // 🔹 Relación con los movimientos de la cuenta     
+  librosMayor LibroMayor[] // 🔹 Relación con los libros mayores de la cuenta
+  createdAt   DateTime            @default(now())
 }
 
 model MovimientosCuenta {
-  id              Int                   @id @default(autoincrement())
-  cuentaId        Int
-  cuenta          CuentaBancaria         @relation(fields: [cuentaId], references: [id])
-  usuarioId       Int                    // ✅ Agregado usuarioId
-  usuario         Usuario                @relation(fields: [usuarioId], references: [id]) // ✅ Relación con Usuario
-  detalles        MovimientoDetalle[]    // ✅ Solo mantiene la relación con los detalles
-  createdAt       DateTime                @default(now())
+  id                  Int                   @id @default(autoincrement())
+  cuentaId            Int
+  cuenta              CuentaBancaria        @relation(fields: [cuentaId], references: [id])
+  usuarioId           Int
+  usuario             Usuario               @relation(fields: [usuarioId], references: [id])
+  detalles            MovimientoDetalle[]
+  detalleConciliacion DetalleConciliacion[]
+  createdAt           DateTime              @default(now())
 }
 
 model MovimientoDetalle {
-  id               Int        @id @default(autoincrement())
-  movimientoId     Int
-  movimiento       MovimientosCuenta @relation(fields: [movimientoId], references: [id])
-  fechaOperacion   DateTime
-  fechaValor       DateTime
-  concepto         String
-  importe          Decimal
-  saldo            Decimal
-  createdAt        DateTime   @default(now())
+  id             Int               @id @default(autoincrement())
+  movimientoId   Int
+  movimiento     MovimientosCuenta @relation(fields: [movimientoId], references: [id])
+  fechaOperacion DateTime
+  fechaValor     DateTime
+  concepto       String
+  importe        Decimal
+  saldoAnterior  Decimal           @default(0.00)
+  saldoFinal     Decimal           @default(0.00)
+  createdAt      DateTime          @default(now())
 }
 
-model ReporteBancario {
-  id              Int              @id @default(autoincrement())
-  fechaSubida     DateTime         @default(now())
-  usuarioId       Int
-  usuario         Usuario          @relation(fields: [usuarioId], references: [id])
-  nombreArchivo   String
-  estadoId        Int
-  estado          Estado           @relation(fields: [estadoId], references: [id])
-  detallesReporte DetalleReporte[] 
-  createdAt       DateTime         @default(now())
-}
-
-model DetalleReporte {
-  id                    Int                   @id @default(autoincrement())
-  reporteId             Int
-  reporte               ReporteBancario       @relation(fields: [reporteId], references: [id])
-  fecha                 DateTime
-  cuentaId              Int
-  cuenta                CuentaBancaria        @relation(fields: [cuentaId], references: [id])
-  descripcion           String
-  valor                Decimal
-  saldo                Decimal
-  referencia           String
-  detalleConciliaciones DetalleConciliacion[] 
-  createdAt             DateTime              @default(now())
+model LibroMayor {
+  id                  Int                   @id @default(autoincrement())
+  cuentaId            Int
+  cuenta              CuentaBancaria        @relation(fields: [cuentaId], references: [id])
+  usuarioId           Int
+  usuario             Usuario               @relation(fields: [usuarioId], references: [id])
+  fechaOperacion      DateTime
+  fechaValor          DateTime
+  descripcion         String
+  debito              Decimal?              @default(0.00)
+  credito             Decimal?              @default(0.00)
+  saldoAnterior       Decimal               @default(0.00) // 🔹 Saldo al inicio del mes
+  saldoFinal          Decimal               @default(0.00) // 🔹 Saldo al final del mes
+  detalleConciliacion DetalleConciliacion[]
+  createdAt           DateTime              @default(now())
 }
 
 model Conciliacion {
-  id                   Int                   @id @default(autoincrement())
-  usuarioId            Int
-  usuario              Usuario               @relation(name: "UsuarioCreador", fields: [usuarioId], references: [id])
-  fecha                DateTime              @default(now())
-  estadoId             Int
-  estado               Estado                @relation(fields: [estadoId], references: [id])
-  detallesConciliacion DetalleConciliacion[]
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  usuario   Usuario  @relation(name: "UsuarioCreador", fields: [usuarioId], references: [id])
+  fecha     DateTime @default(now())
+  estadoId  Int
+  estado    Estado   @relation(fields: [estadoId], references: [id])
 
-  auditorId            Int?                  
-  auditor              Usuario?              @relation(name: "UsuarioAuditor", fields: [auditorId], references: [id])
+  auditorId Int?
+  auditor   Usuario? @relation(name: "UsuarioAuditor", fields: [auditorId], references: [id])
 
-  directorId           Int?                  
-  director             Usuario?              @relation(name: "UsuarioDirector", fields: [directorId], references: [id])
+  directorId Int?
+  director   Usuario? @relation(name: "UsuarioDirector", fields: [directorId], references: [id])
 
-  observaciones        String?
-  createdAt            DateTime              @default(now())
+  observaciones          String?
+  conciliacionesDetalles DetalleConciliacion[]
+
+  createdAt DateTime @default(now())
 }
 
 model DetalleConciliacion {
-  id                Int                 @id @default(autoincrement())
-  conciliacionId    Int
-  conciliacion      Conciliacion        @relation(fields: [conciliacionId], references: [id])
-  detalleReporteId  Int
-  detalleReporte    DetalleReporte      @relation(fields: [detalleReporteId], references: [id])
-  estadoId          Int
-  estado            Estado              @relation(fields: [estadoId], references: [id])
-  createdAt         DateTime            @default(now())
+  id                 Int                @id @default(autoincrement())
+  conciliacionId     Int
+  conciliacion       Conciliacion       @relation(fields: [conciliacionId], references: [id])
+  libroMayorId       Int?
+  libroMayor         LibroMayor?        @relation(fields: [libroMayorId], references: [id])
+  movimientoCuentaId Int?
+  movimientoCuenta   MovimientosCuenta? @relation(fields: [movimientoCuentaId], references: [id])
+  estadoId           Int
+  estado             Estado             @relation(fields: [estadoId], references: [id])
+  createdAt          DateTime           @default(now())
 }
 
 model Estado {
   id                    Int                   @id @default(autoincrement())
   nombre                String                @unique
-  reportes              ReporteBancario[]
   conciliaciones        Conciliacion[]
   detalleConciliaciones DetalleConciliacion[]
 }
@@ -144,10 +137,10 @@ model Auditoria {
 }
 
 model Notificacion {
-  id         Int      @id @default(autoincrement())
-  usuarioId  Int
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
-  mensaje    String
-  leida      Boolean  @default(false) 
-  createdAt  DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  mensaje   String
+  leida     Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
