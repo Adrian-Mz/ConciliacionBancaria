@@ -18,4 +18,9 @@ export const movimientoCuentaAPI = {
     const response = await api.post("/movimiento-cuenta", data);
     return response.data;
   },
+
+  deleteMovimiento: async (id) => {
+    const response = await api.delete(`/movimiento-cuenta/${id}`);
+    return response.data;
+  },
 };

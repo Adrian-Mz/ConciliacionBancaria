@@ -11,6 +11,12 @@ const EstadosCuentaPage = () => {
   const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
   const [nuevoMovimiento, setNuevoMovimiento] = useState({ cuentaId: "", detalles: [] });
   const [detalles, setDetalles] = useState([{ fechaOperacion: "", fechaValor: "", concepto: "", importe: "", saldo: "" }]);
+  const [modalDetallesOpen, setModalDetallesOpen] = useState(false);
+  const [detallesMovimiento, setDetallesMovimiento] = useState([]);
+  const [modalConfirmOpen, setModalConfirmOpen] = useState(false);
+  const [movimientoAEliminar, setMovimientoAEliminar] = useState(null);
+
+
 
   useEffect(() => {
     cargarMovimientos();
@@ -44,6 +50,12 @@ const EstadosCuentaPage = () => {
     setDetalles(nuevosDetalles);
   };
 
+  const handleVerDetalles = (detalles) => {
+    setDetallesMovimiento(detalles);
+    setModalDetallesOpen(true);
+  };
+  
+
   const handleDetalleChange = (index, campo, valor) => {
     const nuevosDetalles = [...detalles];
     nuevosDetalles[index][campo] = valor;
@@ -68,6 +80,25 @@ const EstadosCuentaPage = () => {
     }));
 
     setDetalles([{ fechaOperacion: "", fechaValor: "", concepto: "", importe: "", saldo: cuenta.saldoBanco }]);
+  };
+
+  const handleConfirmEliminar = (id) => {
+    setMovimientoAEliminar(id);
+    setModalConfirmOpen(true);
+  };
+  
+  const handleEliminarMovimiento = async () => {
+    if (!movimientoAEliminar) return;
+    
+    try {
+      await movimientoCuentaAPI.deleteMovimiento(movimientoAEliminar);
+      cargarMovimientos();
+    } catch (error) {
+      console.error("Error al eliminar movimiento:", error);
+    } finally {
+      setModalConfirmOpen(false);
+      setMovimientoAEliminar(null);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -127,11 +158,10 @@ const EstadosCuentaPage = () => {
         Agregar Movimiento <FaPlus className="ml-2" />
       </button>
 
-      <table className="w-full bg-white rounded shadow-md">
+      <table className="w-full bg-white rounded shadow-md table-auto">
         <thead>
           <tr className="bg-gray-200">
-            <th className="p-3">Fecha Operación</th>
-            <th className="p-3">Fecha Valor</th>
+            <th className="p-3">Fecha Movimiento</th>
             <th className="p-3">Cuenta</th>
             <th className="p-3">Acciones</th>
           </tr>
@@ -139,7 +169,11 @@ const EstadosCuentaPage = () => {
         <tbody>
           {movimientos.map((mov) => (
             <tr key={mov.id} className="border-t">
-              <td className="p-3">{mov.fechaOperacion ? new Date(mov.fechaOperacion).toLocaleDateString("es-ES", { month: "long", year: "numeric" }) : "Sin fecha"}</td>
+              <td className="p-3 text-center">
+                {mov.detalles.length > 0
+                  ? new Date(mov.detalles[0].fechaOperacion).toLocaleDateString("es-ES", { month: "long", year: "numeric" })
+                  : "Sin fecha"}
+              </td>
               <td className="p-3">{mov.cuenta?.nombre || "Cuenta no encontrada"}</td>
               <td className="p-3 flex justify-center">
                 <button
@@ -151,6 +185,18 @@ const EstadosCuentaPage = () => {
                   }}
                 >
                   <FaEdit />
+                </button>
+                <button
+                  className="text-green-600"
+                  onClick={() => handleVerDetalles(mov.detalles)}
+                >
+                  <FaPlus /> {/* Ver Detalles */}
+                </button>
+                <button
+                  className="text-red-600"
+                  onClick={() => handleConfirmEliminar(mov.id)}
+                >
+                  <FaTrash />
                 </button>
               </td>
             </tr>
@@ -247,6 +293,86 @@ const EstadosCuentaPage = () => {
           </motion.div>
         </div>
       )}
+
+      {modalDetallesOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg border border-gray-300"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Detalles del Movimiento</h2>
+              <button onClick={() => setModalDetallesOpen(false)} className="text-gray-500 hover:text-gray-800">
+                ✖️
+              </button>
+            </div>
+
+            <table className="w-full border-collapse border border-gray-300 rounded-lg shadow">
+              <thead>
+                <tr className="bg-gray-200 text-gray-700 uppercase text-sm tracking-wider">
+                  <th className="p-2">Fecha Operación</th>
+                  <th className="p-2">Fecha Valor</th>
+                  <th className="p-2">Concepto</th>
+                  <th className="p-2">Importe</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detallesMovimiento.map((detalle, index) => (
+                  <tr key={index} className="border-b border-gray-200 hover:bg-gray-100 transition">
+                    <td className="p-2">{new Date(detalle.fechaOperacion).toLocaleDateString("es-ES")}</td>
+                    <td className="p-2">{new Date(detalle.fechaValor).toLocaleDateString("es-ES")}</td>
+                    <td className="p-2">{detalle.concepto}</td>
+                    <td className="p-2">{detalle.importe}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="mt-4 text-right">
+              <button
+                onClick={() => setModalDetallesOpen(false)}
+                className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded"
+              >
+                Cerrar
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+      
+      {modalConfirmOpen && (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md border border-gray-300"
+        >
+          <h2 className="text-lg font-bold mb-4">¿Confirmar Eliminación?</h2>
+          <p className="text-gray-600">¿Estás seguro de que deseas eliminar este movimiento?</p>
+          
+          <div className="flex justify-end mt-6 space-x-3">
+            <button
+              onClick={() => setModalConfirmOpen(false)}
+              className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleEliminarMovimiento}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+            >
+              Eliminar
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    )}
+
     </div>
   );
 };

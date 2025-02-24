@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { libroMayorAPI } from "../../api/api.libroMayor";
 import { cuentaBancariaAPI } from "../../api/api.cuentaBancaria";
-import { FaPlus, FaTrash, FaInfoCircle } from "react-icons/fa"; // 🔹 Eliminado FaEdit
+import { FaPlus, FaTrash, FaInfoCircle, FaEdit } from "react-icons/fa"; // 🔹 Eliminado FaEdit
 import { motion } from "framer-motion";
 
 const LibroMayorPage = () => {
@@ -45,6 +45,22 @@ const LibroMayorPage = () => {
       console.error("Error al obtener cuentas bancarias:", error);
     }
   };
+
+  const handleEdit = (libro) => {
+    setCuentaSeleccionada(libro.cuenta);
+    setNuevoRegistro({
+      id: libro.id,
+      cuentaId: libro.cuentaId,
+      fechaOperacion: libro.fechaOperacion,
+      descripcion: libro.descripcion,
+      debe: libro.debe,
+      haber: libro.haber,
+      saldoAnterior: libro.saldoAnterior,
+      saldoFinal: libro.saldoFinal,
+    });
+    setModalOpen(true);
+  };
+  
   
   // Manejar la selección de cuenta y establecer el saldo anterior automáticamente
   const handleCuentaSeleccionada = (cuentaId) => {
@@ -86,39 +102,44 @@ const LibroMayorPage = () => {
       };
     });
   };
-  
-  
+
   // Manejar cambios en los detalles de la tabla (Fecha, Descripción, Debe, Haber)
   const handleDetalleChange = (index, campo, valor) => {
     setNuevoRegistro((prev) => {
-        const nuevosDetalles = [...prev.detalles];
-
-        // Si el campo es "debe" o "haber", lo convertimos a número, de lo contrario lo dejamos como string
-        nuevosDetalles[index][campo] = (campo === "debe" || campo === "haber") 
-            ? (valor === "" ? 0 : parseFloat(valor)) 
-            : valor;
-
-        let saldoAnterior = cuentaSeleccionada ? parseFloat(cuentaSeleccionada.saldo) : 0;
-
-        for (let i = 0; i < nuevosDetalles.length; i++) {
-            const debe = parseFloat(nuevosDetalles[i].debe) || 0;
-            const haber = parseFloat(nuevosDetalles[i].haber) || 0;
-
-            nuevosDetalles[i].saldo =
-                i === 0
-                    ? saldoAnterior + debe - haber
-                    : nuevosDetalles[i - 1].saldo + debe - haber;
-        }
-
-        const saldoFinal = nuevosDetalles.length > 0 ? nuevosDetalles[nuevosDetalles.length - 1].saldo : saldoAnterior;
-
-        return {
-            ...prev,
-            detalles: nuevosDetalles,
-            saldoFinal,
-        };
+      const nuevosDetalles = [...prev.detalles];
+  
+      if (campo === "debe") {
+        nuevosDetalles[index]["debe"] = parseFloat(valor) || 0;
+        nuevosDetalles[index]["haber"] = 0; // Bloquear haber si debe tiene valor
+      } else if (campo === "haber") {
+        nuevosDetalles[index]["haber"] = parseFloat(valor) || 0;
+        nuevosDetalles[index]["debe"] = 0; // Bloquear debe si haber tiene valor
+      } else {
+        nuevosDetalles[index][campo] = valor;
+      }
+  
+      let saldoAnterior = cuentaSeleccionada ? parseFloat(cuentaSeleccionada.saldo) : 0;
+  
+      for (let i = 0; i < nuevosDetalles.length; i++) {
+        const debe = parseFloat(nuevosDetalles[i].debe) || 0;
+        const haber = parseFloat(nuevosDetalles[i].haber) || 0;
+  
+        nuevosDetalles[i].saldo =
+          i === 0
+            ? saldoAnterior + debe - haber
+            : nuevosDetalles[i - 1].saldo + debe - haber;
+      }
+  
+      const saldoFinal = nuevosDetalles.length > 0 ? nuevosDetalles[nuevosDetalles.length - 1].saldo : saldoAnterior;
+  
+      return {
+        ...prev,
+        detalles: nuevosDetalles,
+        saldoFinal,
+      };
     });
   };
+  
 
   
   
@@ -142,27 +163,29 @@ const LibroMayorPage = () => {
         return;
       }
   
+      // Validar que al menos un detalle esté presente
       if (!Array.isArray(nuevoRegistro.detalles) || nuevoRegistro.detalles.length === 0) {
         console.error("Debe haber al menos un detalle de movimiento");
         return;
       }
   
+      // Extraer el primer detalle para construir la estructura de la API
+      const detalle = nuevoRegistro.detalles[0]; // Solo un detalle por petición
+  
       const libroMayorData = {
         cuentaId: Number(nuevoRegistro.cuentaId),
         usuarioId: usuario.id,
-        saldoAnterior: nuevoRegistro.saldoAnterior,
-        saldoFinal: nuevoRegistro.saldoFinal,
-        detalles: nuevoRegistro.detalles.map((detalle) => ({
-          fechaOperacion: detalle.fecha || new Date().toISOString().split("T")[0],
-          descripcion: detalle.descripcion || "Sin descripción",
-          debe: Number(detalle.debe) || 0,
-          haber: Number(detalle.haber) || 0,
-          saldo: detalle.saldo || 0,
-        })),
+        fechaOperacion: detalle.fecha || new Date().toISOString().split("T")[0], // Fecha de operación
+        descripcion: detalle.descripcion || "Sin descripción",
+        debe: Number(detalle.debe) || 0,
+        haber: Number(detalle.haber) || 0,
       };
   
+      console.log("📌 Enviando datos:", JSON.stringify(libroMayorData, null, 2));
+  
+      // Si hay un ID, significa que se está editando un registro
       if (nuevoRegistro.id) {
-        await libroMayorAPI.update(libroMayorData.id, libroMayorData);
+        await libroMayorAPI.update(nuevoRegistro.id, libroMayorData);
       } else {
         await libroMayorAPI.create(libroMayorData);
       }
@@ -173,12 +196,14 @@ const LibroMayorPage = () => {
       console.error("Error al guardar registro:", error);
     }
   };
+  
 
   const handleViewDetails = (libro) => {
-    setDetallesLibro(libro);
+    setDetallesLibro(Array.isArray(libro) ? libro : [libro]); // 🔹 Asegurar que siempre sea un array
     setDetallesOpen(true);
   };
 
+  
   const handleDelete = async (id) => {
     if (window.confirm("¿Estás seguro de eliminar este registro?")) {
       try {
@@ -228,6 +253,9 @@ const LibroMayorPage = () => {
                 <button className="text-blue-600" onClick={() => handleViewDetails(libro)}>
                   <FaInfoCircle />
                 </button>
+                <button className="text-yellow-600" onClick={() => handleEdit(libro)}>
+                    <FaEdit />
+                </button>
                 <button className="text-red-600" onClick={() => handleDelete(libro.id)}>
                   <FaTrash />
                 </button>
@@ -243,8 +271,15 @@ const LibroMayorPage = () => {
       {modalOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50">
             <motion.div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl">
-            <h2 className="text-xl font-bold mb-4">Agregar Registro</h2>
-
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold mb-4">Agregar Registro</h2>
+                <button 
+                onClick={() => setModalOpen(false)} 
+                className="text-gray-500 hover:text-gray-800"
+                >
+                ✖️
+                </button>
+            </div>
             {/* Selección de Cuenta */}
             <label className="block">Cuenta:</label>
             <select 
@@ -365,12 +400,44 @@ const LibroMayorPage = () => {
         </div>
         )}
 
-        {detallesOpen && detallesLibro && (
+        {detallesOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50">
             <motion.div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl">
-            <h2 className="text-xl font-bold mb-4">Detalles del Libro Mayor</h2>
-            <pre>{JSON.stringify(detallesLibro, null, 2)}</pre>
-            <button onClick={() => setDetallesOpen(false)} className="bg-red-500 text-white px-4 py-2 rounded">
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold">Detalles del Libro Mayor</h2>
+                <button onClick={() => setDetallesOpen(false)} className="text-gray-500 hover:text-gray-800">
+                ✖️
+                </button>
+            </div>
+
+            {detallesLibro && detallesLibro.length > 0 ? (
+                <table className="w-full border-collapse border border-gray-300 rounded-lg shadow">
+                    <thead>
+                    <tr className="bg-gray-200 text-gray-700 uppercase text-sm tracking-wider">
+                        <th className="p-2">Fecha Operación</th>
+                        <th className="p-2">Descripción</th>
+                        <th className="p-2">Debe</th>
+                        <th className="p-2">Haber</th>
+                        <th className="p-2">Saldo Final</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {detallesLibro.map((detalle, index) => (
+                        <tr key={index} className="border-b border-gray-200 hover:bg-gray-100 transition">
+                        <td className="p-2">{new Date(detalle.fechaOperacion).toLocaleDateString("es-ES")}</td>
+                        <td className="p-2">{detalle.descripcion}</td>
+                        <td className="p-2">{detalle.debe}</td>
+                        <td className="p-2">{detalle.haber}</td>
+                        <td className="p-2">{detalle.saldoFinal}</td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+                ) : (
+                <p className="text-gray-600">No hay detalles disponibles.</p>
+                )}
+
+            <button onClick={() => setDetallesOpen(false)} className="bg-red-500 text-white px-4 py-2 rounded mt-4">
                 Cerrar
             </button>
             </motion.div>

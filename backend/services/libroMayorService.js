@@ -20,37 +20,37 @@ export const LibroMayorService = {
       // 🔹 1. Obtener la cuenta bancaria asociada
       const cuenta = await tx.cuentaBancaria.findUnique({
         where: { id: data.cuentaId },
-        select: { saldoLibro: true }, // ✅ Obtenemos saldoLibro
+        select: { saldo: true, saldoLibro: true }, // ✅ Obtenemos saldo y saldoLibro
       });
-   
+ 
       if (!cuenta) {
         throw new Error("Cuenta bancaria no encontrada.");
       }
-   
+ 
       // 🔹 2. Obtener el último saldo registrado en el libro mayor
       const ultimoRegistro = await tx.libroMayor.findFirst({
         where: { cuentaId: data.cuentaId },
-        orderBy: { id: "desc" }, // ✅ Se usa "id" en orden descendente para obtener el más reciente
+        orderBy: { createdAt: "desc" }, // ✅ Obtener el más reciente
         select: { saldoFinal: true }, // ✅ Traemos saldoFinal del último registro
       });
-   
-      // 🔹 3. Si hay un registro previo, el saldoAnterior debe ser el saldoFinal del último movimiento
+ 
+      // 🔹 3. Determinar el saldo inicial correcto
       let saldoAnterior;
       if (ultimoRegistro) {
-        saldoAnterior = Number(ultimoRegistro.saldoFinal);
+        saldoAnterior = Number(ultimoRegistro.saldoFinal); // ✅ Si hay registros previos, tomamos saldoFinal del último libro
       } else {
-        saldoAnterior = Number(cuenta.saldoLibro) || 0; // Si no hay registros, usar saldoLibro
+        saldoAnterior = Number(cuenta.saldo); // ✅ Si la cuenta es nueva, tomamos el saldo inicial de la cuenta
       }
-   
+ 
       // 🔹 4. Aplicar la lógica de Debe y Haber
       const debe = Number(data.debe) || 0;
       const haber = Number(data.haber) || 0;
-   
+ 
       // 🔹 5. Calcular correctamente el saldoFinal
-      const saldoFinal = saldoAnterior + debe - haber; // ✅ Ahora sí se actualiza correctamente
-   
+      const saldoFinal = saldoAnterior + debe - haber; // ✅ Se actualiza correctamente con Debe y Haber
+ 
       console.log(`🔍 Saldo Anterior: ${saldoAnterior}, Debe: ${debe}, Haber: ${haber}, Saldo Final: ${saldoFinal}`);
-   
+ 
       // 🔹 6. Crear el nuevo registro en el Libro Mayor con los valores corregidos
       const nuevoLibro = await tx.libroMayor.create({
         data: {
@@ -60,21 +60,19 @@ export const LibroMayorService = {
           descripcion: data.descripcion,
           debe,
           haber,
-          saldoAnterior, // ✅ Ahora toma el saldo final del último movimiento
+          saldoAnterior, // ✅ Se establece correctamente según la lógica
           saldoFinal,
         },
       });
-   
+ 
       // 🔹 7. Actualizar saldoLibro en la cuenta bancaria
       await tx.cuentaBancaria.update({
         where: { id: data.cuentaId },
-        data: { saldoLibro: saldoFinal }, // ✅ Ahora se actualiza correctamente
+        data: { saldoLibro: saldoFinal }, // ✅ Se actualiza saldoLibro con el nuevo saldoFinal
       });
-   
+ 
       return nuevoLibro;
     });
-   
-   
   },
  
   async updateLibro(id, data) {
