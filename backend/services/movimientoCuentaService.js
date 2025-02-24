@@ -16,59 +16,81 @@ export const MovimientosCuentaService = {
       throw new Error("Todos los campos del movimiento son obligatorios y debe haber al menos un detalle.");
     }
 
-    // 🔹 1. Obtener el saldo actual de la cuenta bancaria
-    const cuenta = await prisma.cuentaBancaria.findUnique({
-      where: { id: data.cuentaId },
-      select: { saldo: true },
-    });
+    return await prisma.$transaction(async (tx) => {
+      // 🔹 1. Obtener el saldo actual de la cuenta bancaria
+      const cuenta = await tx.cuentaBancaria.findUnique({
+        where: { id: data.cuentaId },
+        select: { saldo: true }, // ✅ Seleccionamos solo saldo
+      });
 
-    if (!cuenta) throw new Error("Cuenta bancaria no encontrada.");
+      console.log("Cuenta obtenida:", cuenta); // 🔍 Agregar log para verificar
 
-    let saldoActual = Number(cuenta.saldo) || 0;
-
-    // 🔹 2. Ordenar los detalles por `fechaOperacion`
-    data.detalles.sort((a, b) => new Date(a.fechaOperacion) - new Date(b.fechaOperacion));
-
-    // 🔹 3. Validar fechas y calcular saldo dinámico
-    const detallesConSaldo = data.detalles.map((detalle) => {
-      const fechaOperacion = new Date(detalle.fechaOperacion);
-      const fechaHoy = new Date();
-
-      if (fechaOperacion > fechaHoy) {
-        throw new Error(`La fecha de operación (${detalle.fechaOperacion}) no puede ser futura.`);
+      if (!cuenta) {
+        throw new Error(`Cuenta bancaria con ID ${data.cuentaId} no encontrada.`);
       }
 
-      const importe = Number(detalle.importe) || 0;
-      saldoActual += importe;
+      let saldoActual = Number(cuenta.saldo) || 0; // ✅ Asegurar que saldo sea un número
 
-      return {
-        fechaOperacion,
-        fechaValor: new Date(detalle.fechaValor),
-        concepto: detalle.concepto,
-        importe,
-        saldo: saldoActual,
-      };
-    });
+      // 🔹 2. Ordenar los detalles por `fechaOperacion`
+      data.detalles.sort((a, b) => new Date(a.fechaOperacion) - new Date(b.fechaOperacion));
 
-    // 🔹 4. Crear el grupo de movimiento sin repetir campos
-    const nuevoMovimiento = await prisma.movimientosCuenta.create({
-      data: {
-        cuentaId: data.cuentaId,
-        usuarioId: data.usuarioId,
-        detalles: {
-          create: detallesConSaldo,
+      // 🔹 3. Validar fechas y calcular saldo dinámico
+      let detallesConSaldo = [];
+
+      detallesConSaldo = data.detalles.map((detalle, index) => {
+        if (!detalle.fechaOperacion || !detalle.fechaValor || !detalle.concepto || detalle.importe === undefined) {
+          throw new Error("Todos los campos de los detalles son obligatorios.");
+        }
+      
+        const fechaOperacion = new Date(detalle.fechaOperacion);
+        const fechaHoy = new Date();
+      
+        const fechaOperacionStr = fechaOperacion.toISOString().split("T")[0];
+        const fechaHoyStr = fechaHoy.toISOString().split("T")[0];
+      
+        if (fechaOperacionStr > fechaHoyStr) {
+          throw new Error(`La fecha de operación (${detalle.fechaOperacion}) no puede ser futura.`);
+        }
+      
+        const importe = Number(detalle.importe) || 0;
+        const saldoPrevio = index === 0 ? saldoActual : detallesConSaldo[index - 1]?.saldoFinal || saldoActual; 
+      
+        console.log(`🔹 Detalle ${index + 1}:`, detalle);
+        console.log(`➡️ Saldo Previo: ${saldoPrevio}`);
+      
+        saldoActual = saldoPrevio + importe;
+      
+        return {
+          fechaOperacion,
+          fechaValor: new Date(detalle.fechaValor),
+          concepto: detalle.concepto,
+          importe,
+          saldoAnterior: saldoPrevio, // ✅ Usar saldoAnterior en lugar de saldo
+          saldoFinal: saldoActual, // ✅ Usar saldoFinal en lugar de saldo
+        };
+      });
+      
+
+      // 🔹 4. Crear el movimiento y detalles en la BD
+      const nuevoMovimiento = await tx.movimientosCuenta.create({
+        data: {
+          cuentaId: data.cuentaId,
+          usuarioId: data.usuarioId,
+          detalles: {
+            create: detallesConSaldo, // ✅ Prisma solo guarda los detalles aquí
+          },
         },
-      },
-      include: { detalles: true },
-    });
+        include: { detalles: true },
+      });
 
-    // 🔹 5. Actualizar el saldo de la cuenta bancaria
-    await prisma.cuentaBancaria.update({
-      where: { id: data.cuentaId },
-      data: { saldo: saldoActual },
-    });
+      // 🔹 5. Actualizar el saldo de la cuenta bancaria
+      await tx.cuentaBancaria.update({
+        where: { id: data.cuentaId },
+        data: { saldo: saldoActual },
+      });
 
-    return nuevoMovimiento;
+      return nuevoMovimiento;
+    });
   },
 
   async updateMovimiento(id, data) {

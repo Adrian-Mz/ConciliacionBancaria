@@ -21,4 +21,14 @@ router.post("/", async (req, res) => {
   }
 });
 
+//Metodo para eliminar una cuenta por ID
+router.delete("/:id", async (req, res)=>{
+  try {
+    const cuenta = await CuentaBancariaService.deleteCuenta(parseInt(req.params.id));
+    res.json({ message: "Cuenta eliminada correctamente" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+})
+
 export default router;
