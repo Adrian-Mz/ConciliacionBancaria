@@ -13,6 +13,7 @@ import GestionRoles from "./pages/Admin/GestionRoles";
 import CuentasBancariasPage from "./pages/Contador/CuentasBancariasPage";
 import MovimientoCuentaPage from "./pages/Contador/MovimientoCuentaPage";
 import GenerarConciliacionPage from "./pages/Contador/GenerarConciliacionPage";
+import LibroMayorPage from "./pages/Contador/LibroMayorPage";
 
 // Auditor
 import RevisarConciliacionesPage from "./pages/auditor/RevisarConciliacionesPage";
@@ -64,6 +65,7 @@ function App() {
             {/* Contador */}
             <Route path="/cuentas-bancarias" element={<ProtectedRoute allowedRoles={[4]}><CuentasBancariasPage /></ProtectedRoute>} />
             <Route path="/estados-cuenta" element={<ProtectedRoute allowedRoles={[4]}><MovimientoCuentaPage /></ProtectedRoute>} />
+            <Route path="/libros-mayor" element={<ProtectedRoute allowedRoles={[4]}><LibroMayorPage /></ProtectedRoute>} />
             <Route path="/generar-conciliacion" element={<ProtectedRoute allowedRoles={[4]}><GenerarConciliacionPage /></ProtectedRoute>} />
 
             {/* Auditor */}

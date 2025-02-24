@@ -44,12 +44,17 @@ const Sidebar = ({ rolId }) => {
             </Link>
             <Link to="/estados-cuenta" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
               <FaClipboardList className="w-6 h-6" />
-              {isOpen && <span>Estados de Cuenta</span>}
+              {isOpen && <span>Movimientos Cuenta Bancaria</span>}
+            </Link>
+            <Link to="/libros-mayor" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
+              <FaClipboardList className="w-6 h-6" />
+              {isOpen && <span>Libros Mayor</span>}
             </Link>
             <Link to="/generar-conciliacion" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
               <FaClipboardList className="w-6 h-6" />
               {isOpen && <span>Generar Conciliación</span>}
             </Link>
+
           </>
         )}
 
