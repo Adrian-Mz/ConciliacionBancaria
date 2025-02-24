@@ -43,7 +43,7 @@ model CuentaBancaria {
   usuarioId   Int
   usuario     Usuario             @relation(fields: [usuarioId], references: [id])
   movimientos MovimientosCuenta[] // 🔹 Relación con los movimientos de la cuenta     
-  librosMayor LibroMayor[] // 🔹 Relación con los libros mayores de la cuenta
+  librosMayor LibroMayor[]        // 🔹 Relación con los libros mayores de la cuenta
   createdAt   DateTime            @default(now())
 }
 
@@ -78,10 +78,9 @@ model LibroMayor {
   usuarioId           Int
   usuario             Usuario               @relation(fields: [usuarioId], references: [id])
   fechaOperacion      DateTime
-  fechaValor          DateTime
   descripcion         String
-  debito              Decimal?              @default(0.00)
-  credito             Decimal?              @default(0.00)
+  debe                Decimal?              @default(0.00)
+  haber               Decimal?              @default(0.00)
   saldoAnterior       Decimal               @default(0.00) // 🔹 Saldo al inicio del mes
   saldoFinal          Decimal               @default(0.00) // 🔹 Saldo al final del mes
   detalleConciliacion DetalleConciliacion[]
