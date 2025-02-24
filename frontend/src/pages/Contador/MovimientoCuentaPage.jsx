@@ -49,18 +49,25 @@ const EstadosCuentaPage = () => {
     nuevosDetalles[index][campo] = valor;
 
     if (campo === "importe") {
-      const valorNumerico = parseFloat(valor) || 0;
-      const saldoAnterior = index > 0 ? parseFloat(nuevosDetalles[index - 1].saldo) || 0 : 0;
-      nuevosDetalles[index].saldo = (saldoAnterior + valorNumerico).toFixed(2);
+      const importe = parseFloat(valor) || 0;
+      const saldoPrevio = index === 0 ? cuentaSeleccionada?.saldoBanco || 0 : parseFloat(nuevosDetalles[index - 1].saldo) || 0;
+      nuevosDetalles[index].saldo = (saldoPrevio + importe);
     }
 
     setDetalles(nuevosDetalles);
   };
 
   const handleCuentaSeleccionada = (cuentaId) => {
-    setNuevoMovimiento({ ...nuevoMovimiento, cuentaId });
     const cuenta = cuentas.find((c) => c.id === Number(cuentaId));
+    if (!cuenta) return;
+
     setCuentaSeleccionada(cuenta);
+    setNuevoMovimiento((prev) => ({
+      ...prev,
+      cuentaId,
+    }));
+
+    setDetalles([{ fechaOperacion: "", fechaValor: "", concepto: "", importe: "", saldo: cuenta.saldoBanco }]);
   };
 
   const handleSubmit = async (e) => {
@@ -132,8 +139,7 @@ const EstadosCuentaPage = () => {
         <tbody>
           {movimientos.map((mov) => (
             <tr key={mov.id} className="border-t">
-              <td className="p-3">{new Date(mov.fechaOperacion).toLocaleDateString()}</td>
-              <td className="p-3">{new Date(mov.fechaValor).toLocaleDateString()}</td>
+              <td className="p-3">{mov.fechaOperacion ? new Date(mov.fechaOperacion).toLocaleDateString("es-ES", { month: "long", year: "numeric" }) : "Sin fecha"}</td>
               <td className="p-3">{mov.cuenta?.nombre || "Cuenta no encontrada"}</td>
               <td className="p-3 flex justify-center">
                 <button
