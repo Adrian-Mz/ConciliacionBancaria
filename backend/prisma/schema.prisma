@@ -35,16 +35,18 @@ model Usuario {
 }
 
 model CuentaBancaria {
-  id          Int                 @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   nombre      String
-  numero      String              @unique
+  numero      String   @unique
   banco       String
-  saldo       Decimal             @default(0.0)
+  saldo       Decimal  @default(0.0) // 🔹 Se mantiene fijo
+  saldoBanco  Decimal  @default(0.0) // 🔹 Nuevo campo para los movimientos bancarios
+  saldoLibro  Decimal  @default(0.0) // 🔹 Nuevo campo para el libro mayor
   usuarioId   Int
-  usuario     Usuario             @relation(fields: [usuarioId], references: [id])
-  movimientos MovimientosCuenta[] // 🔹 Relación con los movimientos de la cuenta     
-  librosMayor LibroMayor[]        // 🔹 Relación con los libros mayores de la cuenta
-  createdAt   DateTime            @default(now())
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  movimientos MovimientosCuenta[]
+  librosMayor LibroMayor[]
+  createdAt   DateTime @default(now())
 }
 
 model MovimientosCuenta {

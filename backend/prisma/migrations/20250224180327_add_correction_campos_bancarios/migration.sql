@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "CuentaBancaria" ADD COLUMN     "saldoBanco" DECIMAL(65,30) NOT NULL DEFAULT 0.0,
+ADD COLUMN     "saldoLibro" DECIMAL(65,30) NOT NULL DEFAULT 0.0;
