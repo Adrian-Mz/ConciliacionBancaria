@@ -104,8 +104,42 @@ export const MovimientosCuentaService = {
     return await MovimientosCuentaData.updateMovimiento(id, data);
   },
  
-  async deleteMovimiento(id) {
-    if (!id || isNaN(id)) throw new Error("ID inválido");
-    return await MovimientosCuentaData.deleteMovimiento(id);
+  async deleteMovimiento(movimientoId) {
+    if (!movimientoId || isNaN(movimientoId)) throw new Error("ID inválido.");
+
+    return await prisma.$transaction(async (tx) => {
+        // 🔹 1. Obtener el movimiento y sus detalles antes de eliminarlo
+        const movimiento = await tx.movimientosCuenta.findUnique({
+            where: { id: movimientoId },
+            include: { detalles: true, cuenta: { select: { saldoBanco: true } } },
+        });
+
+        if (!movimiento) {
+            throw new Error("Movimiento no encontrado.");
+        }
+
+        const cuentaId = movimiento.cuentaId;
+        let saldoBancoActual = Number(movimiento.cuenta.saldoBanco);
+
+        // 🔹 2. Calcular el nuevo saldo ajustando los importes de los detalles
+        let totalImpacto = 0;
+        for (const detalle of movimiento.detalles) {
+            totalImpacto += Number(detalle.importe);
+        }
+        let nuevoSaldoBanco = saldoBancoActual - totalImpacto;
+
+        // 🔹 3. Eliminar el movimiento (Prisma eliminará automáticamente los detalles)
+        await tx.movimientosCuenta.delete({ where: { id: movimientoId } });
+
+        // 🔹 4. Actualizar saldoBanco en la cuenta bancaria
+        await tx.cuentaBancaria.update({
+            where: { id: cuentaId },
+            data: { saldoBanco: nuevoSaldoBanco },
+        });
+
+        console.log(`✅ Movimiento eliminado y saldo actualizado: ${nuevoSaldoBanco}`);
+
+        return { message: "Movimiento eliminado correctamente.", nuevoSaldoBanco };
+    });
   }
 };

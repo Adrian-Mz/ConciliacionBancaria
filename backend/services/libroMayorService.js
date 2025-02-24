@@ -82,6 +82,36 @@ export const LibroMayorService = {
  
   async deleteLibro(id) {
     if (!id || isNaN(id)) throw new Error("ID inválido.");
-    return await LibroMayorData.deleteLibro(id);
-  },
+ 
+    return await prisma.$transaction(async (tx) => {
+        // 🔹 1. Obtener el libro mayor antes de eliminarlo
+        const libro = await tx.libroMayor.findUnique({
+            where: { id },
+            include: { cuenta: { select: { saldoLibro: true } } }, // ✅ Obtener la cuenta asociada
+        });
+ 
+        if (!libro) {
+            throw new Error("Registro en Libro Mayor no encontrado.");
+        }
+ 
+        const cuentaId = libro.cuentaId;
+        let saldoLibroActual = Number(libro.cuenta.saldoLibro);
+ 
+        // 🔹 2. Ajustar el saldo en la cuenta bancaria
+        const saldoAjustado = saldoLibroActual - (libro.saldoFinal - libro.saldoAnterior);
+ 
+        // 🔹 3. Eliminar el registro del libro mayor
+        await tx.libroMayor.delete({ where: { id } });
+ 
+        // 🔹 4. Actualizar saldoLibro en la cuenta bancaria
+        await tx.cuentaBancaria.update({
+            where: { id: cuentaId },
+            data: { saldoLibro: saldoAjustado },
+        });
+ 
+        console.log(`✅ Registro eliminado y saldo actualizado: ${saldoAjustado}`);
+ 
+        return { message: "Registro del Libro Mayor eliminado correctamente.", saldoLibroActualizado: saldoAjustado };
+    });
+  }
 };

@@ -63,7 +63,7 @@ model MovimientosCuenta {
 model MovimientoDetalle {
   id             Int               @id @default(autoincrement())
   movimientoId   Int
-  movimiento     MovimientosCuenta @relation(fields: [movimientoId], references: [id])
+  movimiento     MovimientosCuenta @relation(fields: [movimientoId], references: [id], onDelete: Cascade)
   fechaOperacion DateTime
   fechaValor     DateTime
   concepto       String
