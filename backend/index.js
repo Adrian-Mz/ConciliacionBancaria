@@ -12,7 +12,7 @@ import auditorRoutes from "./routes/auditorRoutes.js";
 import directorRoutes from "./routes/directorRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import estadoRoutes from "./routes/estadoRoutes.js";  // 🔹 Agregado
-import estadoCuentaManualRoutes from "./routes/estadoCuentaManualRoutes.js";  // 🔹 Agregado
+import movimientoCuentaRoutes from "./routes/movimientoCuentaRoutes.js";  // 🔹 Agregado
 
 dotenv.config(); // 🔹 Cargar variables de entorno
 
@@ -33,7 +33,7 @@ app.use("/conciliaciones", conciliacionRoutes);
 app.use("/auditor", auditorRoutes);
 app.use("/director", directorRoutes);
 app.use("/estados", estadoRoutes);  // 🔹 Agregado
-app.use("/estado-cuenta-manual", estadoCuentaManualRoutes);  // 🔹 Agregado
+app.use("/movimiento-cuenta", movimientoCuentaRoutes);  // 🔹 Agregado
 
 // ✅ Middleware para manejar errores globales
 app.use((err, req, res, next) => {

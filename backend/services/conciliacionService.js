@@ -26,17 +26,25 @@ export const ConciliacionService = {
       }
     });
   },
-  
 
-  async actualizarConciliacion(id, data) {
+  async actualizarEstadoConciliacion(id, estado, usuarioId, rol, observaciones = null) {
     if (!id || isNaN(id)) throw new Error("ID inválido");
   
-    // Verificar si la conciliación existe
     const conciliacion = await ConciliacionData.getConciliacionById(id);
     if (!conciliacion) throw new Error("Conciliación no encontrada");
-  
-    // Actualizar la conciliación
-    return await ConciliacionData.updateConciliacion(id, data);
+
+    if (rol === "Auditor" && conciliacion.estadoId !== 1) {
+      throw new Error("Solo conciliaciones en estado 'Pendiente de Revisión' pueden ser revisadas por el Auditor");
+    }
+
+    if (rol === "Director Contable" && conciliacion.estadoId !== 2) {
+      throw new Error("Solo conciliaciones aprobadas por el Auditor pueden ser revisadas por el Director");
+    }
+
+    return await ConciliacionData.updateConciliacion(id, { estadoId: estado, observaciones, auditorId: usuarioId });
+  },
+
+  async getConciliacionesPorEstado(estadoId) {
+    return await ConciliacionData.getConciliacionesPorEstado(estadoId);
   }
-  
 };

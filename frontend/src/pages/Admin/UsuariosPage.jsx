@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { usuarioAPI } from "../api/api.usuarios";
+import { usuarioAPI } from "../../api/api.usuarios";
+import { rolAPI } from "../../api/api.rol";
 import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
 import { motion } from "framer-motion";
 
 const UsuariosPage = () => {
   const [usuarios, setUsuarios] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [contraseña, setContraseña] = useState("");
-  const [rolId, setRolId] = useState(2);
+  const [rolId, setRolId] = useState("");
   const [editId, setEditId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -16,6 +18,7 @@ const UsuariosPage = () => {
 
   useEffect(() => {
     cargarUsuarios();
+    cargarRoles();
   }, []);
 
   const cargarUsuarios = async () => {
@@ -24,6 +27,15 @@ const UsuariosPage = () => {
       setUsuarios(data);
     } catch (error) {
       console.error("Error al obtener usuarios:", error);
+    }
+  };
+
+  const cargarRoles = async () => {
+    try {
+      const data = await rolAPI.getAllRoles();
+      setRoles(data);
+    } catch (error) {
+      console.error("Error al obtener roles:", error);
     }
   };
 
@@ -45,7 +57,7 @@ const UsuariosPage = () => {
   const handleEdit = (usuario) => {
     setNombre(usuario.nombre);
     setCorreo(usuario.correo);
-    setRolId(usuario.rolId);
+    setRolId(usuario.rol?.id || ""); // Corregido para evitar errores
     setEditId(usuario.id);
     setModalOpen(true);
   };
@@ -70,6 +82,10 @@ const UsuariosPage = () => {
     setModalOpen(false);
     setDeleteModalOpen(false);
     setEditId(null);
+    setNombre("");
+    setCorreo("");
+    setContraseña("");
+    setRolId("");
   };
 
   return (
@@ -99,7 +115,7 @@ const UsuariosPage = () => {
               <td className="p-3 text-center">{usuario.id}</td>
               <td className="p-3">{usuario.nombre}</td>
               <td className="p-3">{usuario.correo}</td>
-              <td className="p-3">{usuario.rol.nombre}</td>
+              <td className="p-3">{usuario.rol?.nombre || "Sin rol"}</td>
               <td className="p-3 flex justify-center space-x-4">
                 <button onClick={() => handleEdit(usuario)} className="text-yellow-600">
                   <FaEdit />
@@ -154,10 +170,12 @@ const UsuariosPage = () => {
                 onChange={(e) => setRolId(Number(e.target.value))}
                 className="border p-2 rounded w-full"
               >
-                <option value={1}>Administrador</option>
-                <option value={2}>Usuario</option>
-                <option value={3}>Auditor</option>
-                <option value={4}>Director</option>
+                <option value="">Seleccionar Rol</option>
+                {roles.map((rol) => (
+                  <option key={rol.id} value={rol.id}>
+                    {rol.nombre}
+                  </option>
+                ))}
               </select>
               <div className="flex justify-end space-x-4">
                 <button type="button" onClick={closeModal} className="bg-gray-400 text-white px-4 py-2 rounded">

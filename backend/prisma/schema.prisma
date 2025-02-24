@@ -20,7 +20,7 @@ model Usuario {
   contraseña     String
   rolId          Int
   rol            Rol               @relation(fields: [rolId], references: [id])
-  
+
   // Relaciones con Conciliaciones
   conciliacionesCreadas  Conciliacion[] @relation(name: "UsuarioCreador")  
   auditoriasRealizadas   Conciliacion[] @relation(name: "UsuarioAuditor")  
@@ -29,38 +29,10 @@ model Usuario {
   cuentas        CuentaBancaria[]  
   reportes       ReporteBancario[] 
   auditoria      Auditoria[]       
-  estadosManuales EstadoCuentaManual[]  
-  notificaciones Notificacion[]  
+  notificaciones Notificacion[]
+  movimientos    MovimientosCuenta[]
 
   createdAt      DateTime          @default(now())
-}
-
-model EstadoCuentaManual {
-  id          Int               @id @default(autoincrement())
-  fecha       DateTime
-  cuentaId    Int
-  cuenta      CuentaBancaria    @relation(fields: [cuentaId], references: [id])
-  usuarioId   Int
-  usuario     Usuario           @relation(fields: [usuarioId], references: [id])
-  verificado  Boolean           @default(false) 
-  createdAt   DateTime          @default(now())
-
-  // 🔹 Relación inversa con DetalleConciliacion
-  detalleConciliaciones DetalleConciliacion[] @relation("EstadoCuentaManual_Conciliaciones")
-
-  // 🔹 Relación inversa con EstadoCuentaManualDetalle
-  detalles EstadoCuentaManualDetalle[] @relation("EstadoCuentaManualDetalles")
-}
-
-model EstadoCuentaManualDetalle {
-  id                   Int               @id @default(autoincrement())
-  estadoCuentaManualId Int
-  estadoCuentaManual   EstadoCuentaManual @relation(name: "EstadoCuentaManualDetalles", fields: [estadoCuentaManualId], references: [id])
-  descripcion          String
-  valor                Decimal
-  saldo                Decimal
-  referencia           String
-  createdAt            DateTime         @default(now())
 }
 
 model CuentaBancaria {
@@ -68,11 +40,34 @@ model CuentaBancaria {
   nombre          String
   numero          String                @unique
   banco           String
+  saldo           Decimal                @default(0.00) // 🔹 Se añade saldo inicial
   usuarioId       Int
   usuario         Usuario               @relation(fields: [usuarioId], references: [id])
-  estadosManuales EstadoCuentaManual[]  
+  movimientos     MovimientosCuenta[]    // 🔹 Relación con los movimientos de la cuenta
   detallesReporte DetalleReporte[]      
   createdAt       DateTime              @default(now())
+}
+
+model MovimientosCuenta {
+  id              Int                   @id @default(autoincrement())
+  cuentaId        Int
+  cuenta          CuentaBancaria         @relation(fields: [cuentaId], references: [id])
+  usuarioId       Int                    // ✅ Agregado usuarioId
+  usuario         Usuario                @relation(fields: [usuarioId], references: [id]) // ✅ Relación con Usuario
+  detalles        MovimientoDetalle[]    // ✅ Solo mantiene la relación con los detalles
+  createdAt       DateTime                @default(now())
+}
+
+model MovimientoDetalle {
+  id               Int        @id @default(autoincrement())
+  movimientoId     Int
+  movimiento       MovimientosCuenta @relation(fields: [movimientoId], references: [id])
+  fechaOperacion   DateTime
+  fechaValor       DateTime
+  concepto         String
+  importe          Decimal
+  saldo            Decimal
+  createdAt        DateTime   @default(now())
 }
 
 model ReporteBancario {
@@ -125,13 +120,8 @@ model DetalleConciliacion {
   id                Int                 @id @default(autoincrement())
   conciliacionId    Int
   conciliacion      Conciliacion        @relation(fields: [conciliacionId], references: [id])
-  
-  estadoManualId    Int
-  estadoManual      EstadoCuentaManual  @relation(name: "EstadoCuentaManual_Conciliaciones", fields: [estadoManualId], references: [id])
-  
   detalleReporteId  Int
   detalleReporte    DetalleReporte      @relation(fields: [detalleReporteId], references: [id])
-  
   estadoId          Int
   estado            Estado              @relation(fields: [estadoId], references: [id])
   createdAt         DateTime            @default(now())

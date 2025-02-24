@@ -24,21 +24,53 @@ const Sidebar = ({ rolId }) => {
         </Link>
 
         {rolId === 1 && (
-          <Link to="/usuarios" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
-            <FaUsers className="w-6 h-6" />
-            {isOpen && <span>Gestión de Usuarios</span>}
+          <>
+            <Link to="/usuarios" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
+              <FaUsers className="w-6 h-6" />
+              {isOpen && <span>Gestión de Usuarios</span>}
+            </Link>
+            <Link to="/roles" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
+              <FaCog className="w-6 h-6" />
+              {isOpen && <span>Gestión de Roles</span>}
+            </Link>
+          </>
+        )}
+
+        {rolId === 4 && (
+          <>
+            <Link to="/cuentas-bancarias" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
+              <FaClipboardList className="w-6 h-6" />
+              {isOpen && <span>Cuentas Bancarias</span>}
+            </Link>
+            <Link to="/estados-cuenta" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
+              <FaClipboardList className="w-6 h-6" />
+              {isOpen && <span>Estados de Cuenta</span>}
+            </Link>
+            <Link to="/generar-conciliacion" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
+              <FaClipboardList className="w-6 h-6" />
+              {isOpen && <span>Generar Conciliación</span>}
+            </Link>
+          </>
+        )}
+
+        {rolId === 2 && (
+          <Link to="/revisar-conciliaciones" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
+            <FaClipboardList className="w-6 h-6" />
+            {isOpen && <span>Revisar Conciliaciones</span>}
           </Link>
         )}
 
-        <Link to="/conciliaciones" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
-          <FaClipboardList className="w-6 h-6" />
-          {isOpen && <span>Conciliaciones</span>}
-        </Link>
+        {rolId === 3 && (
+          <Link to="/aprobar-conciliaciones" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
+            <FaClipboardList className="w-6 h-6" />
+            {isOpen && <span>Aprobar Conciliaciones</span>}
+          </Link>
+        )}
 
-        {(rolId === 1 || rolId === 3) && (
-          <Link to="/configuracion" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
-            <FaCog className="w-6 h-6" />
-            {isOpen && <span>Configuración</span>}
+        {rolId === 5 && (
+          <Link to="/historial-conciliaciones" className="flex items-center space-x-2 p-3 hover:bg-gray-700 rounded">
+            <FaClipboardList className="w-6 h-6" />
+            {isOpen && <span>Historial de Conciliaciones</span>}
           </Link>
         )}
       </nav>

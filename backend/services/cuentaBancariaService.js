@@ -11,7 +11,7 @@ export const CuentaBancariaService = {
   },
 
   async createCuenta(data) {
-    if (!data.nombre || !data.numero || !data.banco || !data.usuarioId) {
+    if (!data.nombre || !data.numero || !data.banco || !data.usuarioId || !data.saldo) {
       throw new Error("Todos los campos son obligatorios");
     }
     return await CuentaBancariaData.createCuenta(data);
