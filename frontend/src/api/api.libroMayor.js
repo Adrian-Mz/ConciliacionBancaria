@@ -23,10 +23,13 @@ export const libroMayorAPI = {
 
   create: async (data) => {
     try {
-      const response = await api.post("/libro-mayor", data);
+      // Asegurarse de que `data` sea un array antes de enviarlo
+      const payload = Array.isArray(data) ? data : [data];
+  
+      const response = await api.post("/libro-mayor", payload);
       return response.data;
     } catch (error) {
-      console.error("Error al crear un nuevo registro de Libro Mayor:", error);
+      console.error("Error al crear registros en el Libro Mayor:", error);
       throw error;
     }
   },

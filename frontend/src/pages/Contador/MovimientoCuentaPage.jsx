@@ -42,8 +42,20 @@ const EstadosCuentaPage = () => {
   };
 
   const handleAddDetalle = () => {
-    setDetalles([...detalles, { fechaOperacion: "", fechaValor: "", concepto: "", importe: "", saldo: "" }]);
+    const saldoAnterior = detalles.length > 0 ? parseFloat(detalles[detalles.length - 1].saldo) || 0 : parseFloat(cuentaSeleccionada?.saldoBanco) || 0;
+
+    const nuevoDetalle = {
+        fechaOperacion: "",
+        fechaValor: "",
+        concepto: "",
+        importe: 0,
+        saldo: saldoAnterior // Inicia con el saldo previo en lugar de 0
+    };
+
+    setDetalles([...detalles, nuevoDetalle]);
   };
+
+
 
   const handleRemoveDetalle = (index) => {
     const nuevosDetalles = detalles.filter((_, i) => i !== index);
@@ -58,16 +70,25 @@ const EstadosCuentaPage = () => {
 
   const handleDetalleChange = (index, campo, valor) => {
     const nuevosDetalles = [...detalles];
-    nuevosDetalles[index][campo] = valor;
 
     if (campo === "importe") {
-      const importe = parseFloat(valor) || 0;
-      const saldoPrevio = index === 0 ? cuentaSeleccionada?.saldoBanco || 0 : parseFloat(nuevosDetalles[index - 1].saldo) || 0;
-      nuevosDetalles[index].saldo = (saldoPrevio + importe);
+        // Convertir el importe a número asegurando que no sea NaN
+        const importe = parseFloat(valor) || 0;
+        nuevosDetalles[index][campo] = importe;
+
+        // Calcular el saldo correctamente
+        if (index === 0) {
+            nuevosDetalles[index].saldo = (parseFloat(cuentaSeleccionada?.saldoBanco) || 0) + importe;
+        } else {
+            nuevosDetalles[index].saldo = nuevosDetalles[index - 1].saldo + importe;
+        }
+    } else {
+        nuevosDetalles[index][campo] = valor;
     }
 
     setDetalles(nuevosDetalles);
   };
+
 
   const handleCuentaSeleccionada = (cuentaId) => {
     const cuenta = cuentas.find((c) => c.id === Number(cuentaId));
@@ -75,12 +96,19 @@ const EstadosCuentaPage = () => {
 
     setCuentaSeleccionada(cuenta);
     setNuevoMovimiento((prev) => ({
-      ...prev,
-      cuentaId,
+        ...prev,
+        cuentaId,
     }));
 
-    setDetalles([{ fechaOperacion: "", fechaValor: "", concepto: "", importe: "", saldo: cuenta.saldoBanco }]);
+    setDetalles([{ 
+        fechaOperacion: "", 
+        fechaValor: "", 
+        concepto: "", 
+        importe: 0, 
+        saldo: parseFloat(cuenta.saldoBanco) || 0 
+    }]);
   };
+
 
   const handleConfirmEliminar = (id) => {
     setMovimientoAEliminar(id);

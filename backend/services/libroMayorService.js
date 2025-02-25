@@ -3,77 +3,109 @@ import prisma from "../data/prisma.js";
  
 export const LibroMayorService = {
   async getAllLibros() {
-    return await LibroMayorData.getAllLibros();
-  },
- 
-  async getLibroById(id) {
-    if (!id || isNaN(id)) throw new Error("ID inválido.");
-    return await LibroMayorData.getLibroById(id);
-  },
- 
-  async createLibro(data) {
-    if (!data.cuentaId || !data.usuarioId || !data.fechaOperacion || !data.descripcion) {
-      throw new Error("Todos los campos son obligatorios.");
-    }
- 
-    return await prisma.$transaction(async (tx) => {
-      // 🔹 1. Obtener la cuenta bancaria asociada
-      const cuenta = await tx.cuentaBancaria.findUnique({
-        where: { id: data.cuentaId },
-        select: { saldo: true, saldoLibro: true }, // ✅ Obtenemos saldo y saldoLibro
-      });
- 
-      if (!cuenta) {
-        throw new Error("Cuenta bancaria no encontrada.");
-      }
- 
-      // 🔹 2. Obtener el último saldo registrado en el libro mayor
-      const ultimoRegistro = await tx.libroMayor.findFirst({
-        where: { cuentaId: data.cuentaId },
-        orderBy: { createdAt: "desc" }, // ✅ Obtener el más reciente
-        select: { saldoFinal: true }, // ✅ Traemos saldoFinal del último registro
-      });
- 
-      // 🔹 3. Determinar el saldo inicial correcto
-      let saldoAnterior;
-      if (ultimoRegistro) {
-        saldoAnterior = Number(ultimoRegistro.saldoFinal); // ✅ Si hay registros previos, tomamos saldoFinal del último libro
-      } else {
-        saldoAnterior = Number(cuenta.saldo); // ✅ Si la cuenta es nueva, tomamos el saldo inicial de la cuenta
-      }
- 
-      // 🔹 4. Aplicar la lógica de Debe y Haber
-      const debe = Number(data.debe) || 0;
-      const haber = Number(data.haber) || 0;
- 
-      // 🔹 5. Calcular correctamente el saldoFinal
-      const saldoFinal = saldoAnterior + debe - haber; // ✅ Se actualiza correctamente con Debe y Haber
- 
-      console.log(`🔍 Saldo Anterior: ${saldoAnterior}, Debe: ${debe}, Haber: ${haber}, Saldo Final: ${saldoFinal}`);
- 
-      // 🔹 6. Crear el nuevo registro en el Libro Mayor con los valores corregidos
-      const nuevoLibro = await tx.libroMayor.create({
-        data: {
-          cuentaId: data.cuentaId,
-          usuarioId: data.usuarioId,
-          fechaOperacion: new Date(data.fechaOperacion),
-          descripcion: data.descripcion,
-          debe,
-          haber,
-          saldoAnterior, // ✅ Se establece correctamente según la lógica
-          saldoFinal,
+    return await prisma.libroMayor.findMany({
+        include: {
+            cuenta: true,  // ✅ Incluir detalles de la cuenta
+            usuario: true, // ✅ Incluir detalles del usuario
         },
-      });
- 
-      // 🔹 7. Actualizar saldoLibro en la cuenta bancaria
-      await tx.cuentaBancaria.update({
-        where: { id: data.cuentaId },
-        data: { saldoLibro: saldoFinal }, // ✅ Se actualiza saldoLibro con el nuevo saldoFinal
-      });
- 
-      return nuevoLibro;
+        orderBy: {
+            fechaOperacion: "asc", // ✅ Ordenar por fecha
+        },
     });
   },
+ 
+ 
+  async getLibroById(cuentaId) {
+    if (!cuentaId || isNaN(cuentaId)) throw new Error("ID de cuenta inválido.");
+   
+    // 🔹 Traer todos los registros asociados a la cuenta bancaria
+    const libros = await prisma.libroMayor.findMany({
+        where: { cuentaId },
+        include: {
+            cuenta: true,
+            usuario: true,
+        },
+        orderBy: {
+            fechaOperacion: "asc",
+        },
+    });
+ 
+    if (!libros || libros.length === 0) {
+        throw new Error("No se encontraron registros en el Libro Mayor para esta cuenta.");
+    }
+ 
+    return libros;
+  },
+ 
+ 
+  async createLibro(data) {
+    // 🔹 Validar si data es un array o un solo objeto
+    const registros = Array.isArray(data) ? data : [data];
+ 
+    return await prisma.$transaction(async (tx) => {
+      const resultados = [];
+ 
+      for (const registro of registros) {
+        if (!registro.cuentaId || !registro.usuarioId || !registro.fechaOperacion || !registro.descripcion) {
+          throw new Error("Todos los campos son obligatorios.");
+        }
+ 
+        // 🔹 Obtener la cuenta bancaria asociada
+        const cuenta = await tx.cuentaBancaria.findUnique({
+          where: { id: registro.cuentaId },
+          select: { saldo: true, saldoLibro: true },
+        });
+ 
+        if (!cuenta) {
+          throw new Error("Cuenta bancaria no encontrada.");
+        }
+ 
+        // 🔹 Obtener el último saldo registrado en el libro mayor
+        const ultimoRegistro = await tx.libroMayor.findFirst({
+          where: { cuentaId: registro.cuentaId },
+          orderBy: { createdAt: "desc" },
+          select: { saldoFinal: true },
+        });
+ 
+        // 🔹 Determinar el saldo inicial correcto
+        let saldoAnterior = ultimoRegistro ? Number(ultimoRegistro.saldoFinal) : Number(cuenta.saldo);
+ 
+        // 🔹 Aplicar la lógica de Debe y Haber
+        const debe = Number(registro.debe) || 0;
+        const haber = Number(registro.haber) || 0;
+ 
+        // 🔹 Calcular el saldo final
+        const saldoFinal = saldoAnterior + debe - haber;
+ 
+        console.log(`🔍 [Registro ${registro.descripcion}] Saldo Anterior: ${saldoAnterior}, Debe: ${debe}, Haber: ${haber}, Saldo Final: ${saldoFinal}`);
+ 
+        // 🔹 Crear el nuevo registro en el Libro Mayor
+        const nuevoLibro = await tx.libroMayor.create({
+          data: {
+            cuentaId: registro.cuentaId,
+            usuarioId: registro.usuarioId,
+            fechaOperacion: new Date(registro.fechaOperacion),
+            descripcion: registro.descripcion,
+            debe,
+            haber,
+            saldoAnterior,
+            saldoFinal,
+          },
+        });
+ 
+        resultados.push(nuevoLibro);
+       
+        // 🔹 Actualizar saldoLibro en la cuenta bancaria
+        await tx.cuentaBancaria.update({
+          where: { id: registro.cuentaId },
+          data: { saldoLibro: saldoFinal },
+        });
+      }
+ 
+      return { message: "Registros insertados correctamente.", registros: resultados.length, data: resultados };
+    });
+  },
+ 
  
   async updateLibro(id, data) {
     if (!id || isNaN(id)) throw new Error("ID inválido.");

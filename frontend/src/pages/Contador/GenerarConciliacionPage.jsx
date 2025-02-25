@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { conciliacionAPI } from "../../api/api.conciliaciones";
 import { cuentaBancariaAPI } from "../../api/api.cuentaBancaria";
 import { motion } from "framer-motion";
+import { toast } from "react-toastify";
 
 const GenerarConciliacionPage = () => {
   const [cuentas, setCuentas] = useState([]);
@@ -66,53 +67,57 @@ const GenerarConciliacionPage = () => {
 
   const handleEnviarConciliacion = async () => {
     try {
-      if (!cuentaSeleccionada) return;
-  
-      const usuario = JSON.parse(localStorage.getItem("user"));
-      const fechaISO = new Date(`${mesSeleccionado}-01T00:00:00.000Z`).toISOString();
-  
-      const detallesTransformados = editingData.map(detalle => ({
-        fechaOperacion: new Date(detalle.fechaOperacion).toISOString(),
-        descripcion: detalle.descripcion || "Sin descripción",
-        debe: parseFloat(detalle.debe) || 0, 
-        haber: parseFloat(detalle.haber) || 0,
-        estadoId: 1
-      }));
-  
-      console.log("📌 Datos que se enviarán:", {
-        usuarioId: usuario.id,
-        cuentaId: Number(cuentaSeleccionada), 
-        fecha: fechaISO,
-        detalles: detallesTransformados
-      });
-  
-      if (estadoConciliacion === "Rechazada") {
-        console.log("🔄 Actualizando conciliación rechazada...");
-        await conciliacionAPI.updateConciliacion({
-          usuarioId: usuario.id,
-          cuentaId: Number(cuentaSeleccionada), 
-          fecha: fechaISO, 
-          detalles: detallesTransformados,
+        if (!cuentaSeleccionada) return;
+
+        const usuario = JSON.parse(localStorage.getItem("user"));
+        const fechaISO = new Date(`${mesSeleccionado}-01T00:00:00.000Z`).toISOString();
+
+        // ✅ Transformar detalles asegurando que no haya valores null
+        const detallesTransformados = editingData.map(detalle => ({
+            fechaOperacion: detalle.fechaOperacion ? new Date(detalle.fechaOperacion).toISOString() : fechaISO,
+            descripcion: detalle.descripcion || "Sin descripción",
+            debe: detalle.debe ? parseFloat(detalle.debe) : 0, 
+            haber: detalle.haber ? parseFloat(detalle.haber) : 0,
+            estadoId: 1,
+            movimientoCuentaId: detalle.movimientoCuentaId || null,
+            libroMayorId: detalle.libroMayorId || null
+        }));
+
+        console.log("📌 Datos que se enviarán:", {
+            usuarioId: usuario.id,
+            cuentaId: Number(cuentaSeleccionada), 
+            fecha: fechaISO,
+            detalles: detallesTransformados
         });
-      } else {
-        console.log("📌 Creando nueva conciliación...");
-        await conciliacionAPI.createConciliacion({
-          usuarioId: usuario.id,
-          cuentaId: Number(cuentaSeleccionada), 
-          fecha: fechaISO, 
-          detalles: detallesTransformados,
-        });
-      }
-  
-      setModalOpen(false);
-      alert("✅ Conciliación enviada correctamente.");
-      handleSeleccionCuenta(cuentaSeleccionada);
-  
+
+        if (estadoConciliacion === "Rechazada") {
+            console.log("🔄 Actualizando conciliación rechazada...");
+            await conciliacionAPI.updateConciliacion({
+                usuarioId: usuario.id,
+                cuentaId: Number(cuentaSeleccionada), 
+                fecha: fechaISO, 
+                detalles: detallesTransformados,
+            });
+        } else {
+            console.log("📌 Creando nueva conciliación...");
+            await conciliacionAPI.createConciliacion({
+                usuarioId: usuario.id,
+                cuentaId: Number(cuentaSeleccionada), 
+                fecha: fechaISO, 
+                detalles: detallesTransformados,
+            });
+        }
+
+        setModalOpen(false);
+        toast.success("Conciliación enviada correctamente.");
+        handleSeleccionCuenta(cuentaSeleccionada);
+
     } catch (error) {
-      console.error("❌ Error al generar conciliación:", error);
-      alert("No se pudo generar la conciliación.");
+        console.error("❌ Error al generar conciliación:", error);
+        toast.error("No se pudo generar la conciliación.");
     }
   };
+
 
   return (
     <div className="p-6">

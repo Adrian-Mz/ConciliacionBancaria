@@ -1,28 +1,32 @@
 import prisma from "./prisma.js";
-
+ 
 export const LibroMayorData = {
   async getAllLibros() {
     return await prisma.libroMayor.findMany({
-      include: {
-        cuenta: true,
-        usuario: true,
-      },
-      orderBy: {
-        fechaOperacion: "asc",
-      },
+        include: {
+            cuenta: true,  // ✅ Incluir detalles de la cuenta bancaria
+            usuario: true, // ✅ Incluir información del usuario
+        },
+        orderBy: {
+            fechaOperacion: "asc", // ✅ Ordenar por fecha
+        },
     });
   },
-
-  async getLibroById(id) {
-    return await prisma.libroMayor.findUnique({
-      where: { id },
-      include: {
-        cuenta: true,
-        usuario: true,
-      },
+ 
+ 
+  async getLibroById(cuentaId) {
+    return await prisma.libroMayor.findMany({
+        where: { cuentaId },
+        include: {
+            cuenta: true,
+            usuario: true,
+        },
+        orderBy: {
+            fechaOperacion: "asc",
+        },
     });
   },
-
+ 
   async createLibro(data) {
     return await prisma.libroMayor.create({
       data: {
@@ -37,7 +41,7 @@ export const LibroMayorData = {
       },
     });
   },
-
+ 
   async updateLibro(id, data) {
     return await prisma.libroMayor.update({
       where: { id },
@@ -50,7 +54,7 @@ export const LibroMayorData = {
       },
     });
   },
-
+ 
   async deleteLibro(id) {
     return await prisma.libroMayor.delete({ where: { id } });
   },

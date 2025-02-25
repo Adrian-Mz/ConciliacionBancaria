@@ -163,41 +163,42 @@ const LibroMayorPage = () => {
         return;
       }
   
-      // Validar que al menos un detalle esté presente
       if (!Array.isArray(nuevoRegistro.detalles) || nuevoRegistro.detalles.length === 0) {
         console.error("Debe haber al menos un detalle de movimiento");
         return;
       }
   
-      // Extraer el primer detalle para construir la estructura de la API
-      const detalle = nuevoRegistro.detalles[0]; // Solo un detalle por petición
+      // 🔹 Preparar todos los registros del Libro Mayor
+      const registrosLibroMayor = nuevoRegistro.detalles.map((detalle, index) => {
+        const debe = detalle.debe ? Number(detalle.debe) : 0;
+        const haber = detalle.haber ? Number(detalle.haber) : 0;
   
-      const libroMayorData = {
-        cuentaId: Number(nuevoRegistro.cuentaId),
-        usuarioId: usuario.id,
-        fechaOperacion: detalle.fecha || new Date().toISOString().split("T")[0], // Fecha de operación
-        descripcion: detalle.descripcion || "Sin descripción",
-        debe: Number(detalle.debe) || 0,
-        haber: Number(detalle.haber) || 0,
-      };
+        return {
+          cuentaId: Number(nuevoRegistro.cuentaId),
+          usuarioId: usuario.id,
+          fechaOperacion: detalle.fecha || new Date().toISOString().split("T")[0],
+          descripcion: detalle.descripcion || "Sin descripción",
+          debe,
+          haber,
+          saldoAnterior: index === 0 ? Number(nuevoRegistro.saldoAnterior) : nuevoRegistro.detalles[index - 1].saldo,
+          saldoFinal: index === 0
+            ? Number(nuevoRegistro.saldoAnterior) + debe - haber
+            : nuevoRegistro.detalles[index - 1].saldo + debe - haber,
+        };
+      });
   
-      console.log("📌 Enviando datos:", JSON.stringify(libroMayorData, null, 2));
+      console.log("📌 Enviando registros:", JSON.stringify(registrosLibroMayor, null, 2));
   
-      // Si hay un ID, significa que se está editando un registro
-      if (nuevoRegistro.id) {
-        await libroMayorAPI.update(nuevoRegistro.id, libroMayorData);
-      } else {
-        await libroMayorAPI.create(libroMayorData);
-      }
+      // 🔹 Enviar los datos al backend en una sola petición
+      await libroMayorAPI.create(registrosLibroMayor);
   
       setModalOpen(false);
       cargarLibrosMayores();
     } catch (error) {
-      console.error("Error al guardar registro:", error);
+      console.error("Error al guardar registros en el Libro Mayor:", error);
     }
   };
   
-
   const handleViewDetails = (libro) => {
     setDetallesLibro(Array.isArray(libro) ? libro : [libro]); // 🔹 Asegurar que siempre sea un array
     setDetallesOpen(true);
