@@ -35,11 +35,11 @@ const GenerarConciliacionPage = () => {
     setLoading(true);
     try {
       setCuentaSeleccionada(cuentaId);
-      setEstadoConciliacion(null); // 🔹 Reiniciamos el estado de la conciliación
+      setEstadoConciliacion(null); 
   
       console.log(`🔹 Buscando conciliación para cuenta: ${cuentaId} en mes: ${mesSeleccionado}`);
   
-      // ✅ Verificar si ya existe una conciliación previa en el mes seleccionado
+      // Obtener conciliaciones previas
       const conciliacionesPrevias = await conciliacionAPI.getConciliacionByCuentaId(cuentaId);
       const conciliacionActual = conciliacionesPrevias.find((c) => c.fecha.startsWith(mesSeleccionado));
   
@@ -48,13 +48,25 @@ const GenerarConciliacionPage = () => {
         setEstadoConciliacion(conciliacionActual.estado.nombre);
       }
   
-      // ✅ Obtener los movimientos para conciliación
+      // Obtener movimientos para conciliación
       const conciliacion = await conciliacionAPI.getMovimientosParaConciliacion(cuentaId, mesSeleccionado);
+  
+      if (!conciliacion || conciliacion.length === 0) {
+        console.error("⚠️ No hay datos de conciliación para esta cuenta.");
+        toast.warning("No hay datos disponibles para esta conciliación.");
+        setDetallesConciliacion([]);
+        setEditingData([]);
+        return;
+      }
+  
+      console.log("✅ Datos de conciliación cargados:", conciliacion);
+  
       setDetallesConciliacion(conciliacion);
       setEditingData(conciliacion.map(detalle => ({ ...detalle })));
   
     } catch (error) {
       console.error("❌ Error al obtener datos para la conciliación:", error);
+      toast.error("Error al cargar datos de conciliación.");
     }
     setLoading(false);
   };
@@ -67,45 +79,59 @@ const GenerarConciliacionPage = () => {
 
   const handleEnviarConciliacion = async () => {
     try {
-        if (!cuentaSeleccionada) return;
+        if (!cuentaSeleccionada) {
+            console.error("❌ No se ha seleccionado una cuenta.");
+            toast.error("Seleccione una cuenta antes de enviar la conciliación.");
+            return;
+        }
 
         const usuario = JSON.parse(localStorage.getItem("user"));
         const fechaISO = new Date(`${mesSeleccionado}-01T00:00:00.000Z`).toISOString();
 
-        // ✅ Transformar detalles asegurando que no haya valores null
-        const detallesTransformados = editingData.map(detalle => ({
-            fechaOperacion: detalle.fechaOperacion ? new Date(detalle.fechaOperacion).toISOString() : fechaISO,
-            descripcion: detalle.descripcion || "Sin descripción",
-            debe: detalle.debe ? parseFloat(detalle.debe) : 0, 
-            haber: detalle.haber ? parseFloat(detalle.haber) : 0,
-            estadoId: 1,
-            movimientoCuentaId: detalle.movimientoCuentaId || null,
-            libroMayorId: detalle.libroMayorId || null
-        }));
+        console.log("🔍 Revisando detalles antes de enviar:", editingData);
 
-        console.log("📌 Datos que se enviarán:", {
+        if (!editingData || editingData.length === 0) {
+            console.error("❌ No hay detalles válidos para la conciliación.");
+            toast.error("No hay movimientos o registros válidos para conciliar.");
+            return;
+        }
+
+        // 🔹 Transformar detalles correctamente asegurando "movimientoCuentaId" o "libroMayorId"
+        const conciliacionesDetalles = editingData
+            .filter(detalle => detalle.tipo && detalle.fechaOperacion && detalle.descripcion)
+            .map(detalle => ({
+                fechaOperacion: detalle.fechaOperacion,
+                descripcion: detalle.descripcion || "Sin descripción",
+                debe: detalle.debe ? parseFloat(detalle.debe) : 0,
+                haber: detalle.haber ? parseFloat(detalle.haber) : 0,
+                estadoId: 1,
+                movimientoCuentaId: detalle.tipo === "Banco" ? detalle.id : null,
+                libroMayorId: detalle.tipo === "Libro Mayor" ? detalle.id : null
+            }))
+            .filter(detalle => detalle.movimientoCuentaId !== null || detalle.libroMayorId !== null); // ✅ Validar que al menos uno tenga ID válido
+
+        if (conciliacionesDetalles.length === 0) {
+            console.error("❌ No hay detalles válidos después del filtrado.");
+            toast.error("No se puede enviar una conciliación sin detalles válidos.");
+            return;
+        }
+
+        const conciliacionData = {
             usuarioId: usuario.id,
-            cuentaId: Number(cuentaSeleccionada), 
+            cuentaId: Number(cuentaSeleccionada),
             fecha: fechaISO,
-            detalles: detallesTransformados
-        });
+            estadoId: 1,
+            conciliacionesDetalles // ✅ Enviar array corregido
+        };
+
+        console.log("📌 Datos que se enviarán:", JSON.stringify(conciliacionData, null, 2));
 
         if (estadoConciliacion === "Rechazada") {
             console.log("🔄 Actualizando conciliación rechazada...");
-            await conciliacionAPI.updateConciliacion({
-                usuarioId: usuario.id,
-                cuentaId: Number(cuentaSeleccionada), 
-                fecha: fechaISO, 
-                detalles: detallesTransformados,
-            });
+            await conciliacionAPI.updateConciliacion(conciliacionData);
         } else {
             console.log("📌 Creando nueva conciliación...");
-            await conciliacionAPI.createConciliacion({
-                usuarioId: usuario.id,
-                cuentaId: Number(cuentaSeleccionada), 
-                fecha: fechaISO, 
-                detalles: detallesTransformados,
-            });
+            await conciliacionAPI.createConciliacion(conciliacionData);
         }
 
         setModalOpen(false);
@@ -117,7 +143,6 @@ const GenerarConciliacionPage = () => {
         toast.error("No se pudo generar la conciliación.");
     }
   };
-
 
   return (
     <div className="p-6">

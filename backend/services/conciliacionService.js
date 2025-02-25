@@ -1,20 +1,20 @@
 import { ConciliacionData } from "../data/conciliacionData.js";
 import prisma from "../data/prisma.js";
-
+ 
 export const ConciliacionService = {
   async getAllConciliaciones() {
     return await ConciliacionData.getAllConciliaciones();
   },
-
+ 
   async getConciliacionById(id) {
     if (!id || isNaN(id)) throw new Error("ID inválido");
-
+ 
     return await ConciliacionData.getConciliacionById(id);
   },
-
+ 
   async getConciliacionByCuentaId(cuentaId) {
     if (!cuentaId || isNaN(cuentaId)) throw new Error("ID de cuenta inválido");
-  
+ 
     return await prisma.conciliacion.findMany({
       where: { cuentaId },
       include: {
@@ -27,23 +27,23 @@ export const ConciliacionService = {
       },
     });
   },
-
+ 
   async obtenerMovimientosParaConciliacion(cuentaId, fecha) {
     if (!cuentaId || isNaN(cuentaId)) {
       throw new Error("ID de cuenta inválido.");
     }
-
+ 
     const inicioMes = new Date(new Date(fecha).getFullYear(), new Date(fecha).getMonth(), 1);
     const finMes = new Date(new Date(fecha).getFullYear(), new Date(fecha).getMonth() + 1, 0);
-
+ 
     const { movimientos, librosMayor } = await ConciliacionData.getMovimientosYLibrosMayor(
       cuentaId,
       inicioMes,
       finMes
     );
-
+ 
     const detallesConciliacion = [];
-
+ 
     movimientos.forEach((mov) => {
       mov.detalles.forEach((detalle) => {
         detallesConciliacion.push({
@@ -55,7 +55,7 @@ export const ConciliacionService = {
         });
       });
     });
-
+ 
     librosMayor.forEach((libro) => {
       detallesConciliacion.push({
         fechaOperacion: libro.fechaOperacion,
@@ -65,42 +65,35 @@ export const ConciliacionService = {
         tipo: "Libro Mayor",
       });
     });
-
+ 
     return detallesConciliacion;
   },
-
+ 
   async generarConciliacion(data) {
     const { usuarioId, cuentaId, fecha, detalles } = data;
-
+ 
     if (!usuarioId || !cuentaId || !fecha || !detalles || detalles.length === 0) {
         throw new Error("Faltan datos obligatorios para la conciliación.");
     }
-
-    console.log("Recibido en el backend:", data);
-
+ 
+    console.log("📌 Recibido en el backend:", data);
+ 
     const fechaISO = new Date(fecha);
-
+ 
     // Transformar los detalles correctamente
     const detallesConciliacion = detalles.map((detalle) => {
-        let movimientoCuentaId = null;
-        let libroMayorId = null;
-
-        // 🔹 Asignar correctamente a `movimientoCuentaId` o `libroMayorId`
-        if (detalle.tipo === "Banco") {
-            movimientoCuentaId = detalle.id; // Relacionar con MovimientosCuenta
-        } else if (detalle.tipo === "Libro Mayor") {
-            libroMayorId = detalle.id; // Relacionar con LibroMayor
-        }
-
+        let movimientoCuentaId = detalle.tipo === "Banco" ? detalle.id : null;
+        let libroMayorId = detalle.tipo === "Libro Mayor" ? detalle.id : null;
+ 
         return {
-            estadoId: 1, // Estado inicial "Pendiente"
+            estadoId: 1,
             movimientoCuentaId,
             libroMayorId,
         };
     });
-
-    console.log("Detalles generados para la conciliación:", detallesConciliacion);
-
+ 
+    console.log("✅ Detalles generados para la conciliación:", detallesConciliacion);
+ 
     return await prisma.conciliacion.create({
         data: {
             usuarioId,
@@ -111,6 +104,25 @@ export const ConciliacionService = {
                 create: detallesConciliacion,
             },
         },
+        include: {
+            conciliacionesDetalles: true, // ✅ Para verificar si los datos se guardan bien
+        },
     });
-  }
+  },
+ 
+  async updateConciliacion(id, data) {
+    if (!id || isNaN(id)) throw new Error("ID inválido.");
+
+    const conciliacion = await prisma.conciliacion.findUnique({ where: { id } });
+    if (!conciliacion) throw new Error("Conciliación no encontrada.");
+
+    return await prisma.conciliacion.update({
+        where: { id },
+        data: {
+            estadoId: data.estadoId,
+            auditorId: data.auditorId || conciliacion.auditorId, // ✅ Registrar el auditor que aprueba
+        },
+    });
+  },
+
 };

@@ -1,5 +1,5 @@
 import prisma from "./prisma.js";
-
+ 
 export const ConciliacionData = {
   async getAllConciliaciones() {
     return await prisma.conciliacion.findMany({
@@ -13,21 +13,31 @@ export const ConciliacionData = {
       },
     });
   },
-
+ 
   async getConciliacionById(id) {
     return await prisma.conciliacion.findUnique({
-      where: { id },
-      include: {
-        usuario: true,
-        estado: true,
-        cuenta: true,
-        conciliacionesDetalles: {
-          include: { libroMayor: true, movimientoCuenta: true },
+        where: { id },
+        include: {
+            usuario: true,
+            estado: true,
+            cuenta: true,
+            conciliacionesDetalles: {
+                include: {
+                    libroMayor: true,
+                    movimientoCuenta: true
+                },
+                where: {
+                    OR: [
+                        { libroMayorId: { not: null } },
+                        { movimientoCuentaId: { not: null } }
+                    ]
+                }
+            },
         },
-      },
     });
   },
-
+ 
+ 
   async getMovimientosYLibrosMayor(cuentaId, inicioMes, finMes) {
     const movimientos = await prisma.movimientosCuenta.findMany({
       where: {
@@ -36,17 +46,17 @@ export const ConciliacionData = {
       },
       include: { detalles: true },
     });
-
+ 
     const librosMayor = await prisma.libroMayor.findMany({
       where: {
         cuentaId,
         fechaOperacion: { gte: inicioMes, lte: finMes },
       },
     });
-
+ 
     return { movimientos, librosMayor };
   },
-
+ 
   async createConciliacion(data) {
     return await prisma.conciliacion.create({
       data,
@@ -55,7 +65,7 @@ export const ConciliacionData = {
       },
     });
   },
-
+ 
   async updateConciliacion(id, data) {
     return await prisma.conciliacion.update({ where: { id }, data });
   },

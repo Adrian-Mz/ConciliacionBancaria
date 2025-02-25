@@ -49,11 +49,42 @@ export const conciliacionAPI = {
 
   createConciliacion: async (data) => {
     try {
-      const response = await api.post("/conciliaciones/generar", data);
+      // 🔹 Filtrar detalles para evitar valores `null`
+      const detallesConciliacion = data.detalles.map((detalle) => ({
+        ...detalle,
+        movimientoCuentaId: detalle.tipo === "Banco" ? detalle.id : null,
+        libroMayorId: detalle.tipo === "Libro Mayor" ? detalle.id : null,
+      })).filter(detalle => detalle.movimientoCuentaId !== null || detalle.libroMayorId !== null); // ❌ Evita registros vacíos
+  
+      const conciliacionData = {
+        usuarioId: data.usuarioId,
+        cuentaId: data.cuentaId,
+        fecha: data.fecha,
+        estadoId: 1,
+        conciliacionesDetalles: detallesConciliacion,
+      };
+  
+      console.log("📌 Enviando conciliación:", JSON.stringify(conciliacionData, null, 2));
+  
+      const response = await api.post("/conciliaciones/generar", conciliacionData);
       return response.data;
     } catch (error) {
-      console.error("Error al crear conciliación:", error.response?.data || error.message);
+      console.error("❌ Error al crear conciliación:", error.response?.data || error.message);
       throw new Error("No se pudo crear la conciliación.");
+    }
+  },
+
+  updateConciliacionEstado: async (id, data) => {
+    try {
+      if (!id || isNaN(id)) throw new Error("ID inválido para actualizar la conciliación.");
+
+      console.log(`📌 Enviando actualización de conciliación con ID ${id}:`, data);
+
+      const response = await api.put(`/conciliaciones/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Error al actualizar la conciliación con ID ${id}:`, error.response?.data || error.message);
+      throw new Error("No se pudo actualizar la conciliación.");
     }
   },
 };
