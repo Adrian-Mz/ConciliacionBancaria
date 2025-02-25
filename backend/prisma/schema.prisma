@@ -39,13 +39,17 @@ model CuentaBancaria {
   nombre      String
   numero      String   @unique
   banco       String
-  saldo       Decimal  @default(0.0) // 🔹 Se mantiene fijo
-  saldoBanco  Decimal  @default(0.0) // 🔹 Nuevo campo para los movimientos bancarios
-  saldoLibro  Decimal  @default(0.0) // 🔹 Nuevo campo para el libro mayor
+  saldo       Decimal  @default(0.0)
+  saldoBanco  Decimal  @default(0.0)
+  saldoLibro  Decimal  @default(0.0)
   usuarioId   Int
   usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  
   movimientos MovimientosCuenta[]
   librosMayor LibroMayor[]
+  
+  conciliaciones Conciliacion[] // ✅ Relación inversa con Conciliacion
+
   createdAt   DateTime @default(now())
 }
 
@@ -96,6 +100,9 @@ model Conciliacion {
   fecha     DateTime @default(now())
   estadoId  Int
   estado    Estado   @relation(fields: [estadoId], references: [id])
+
+  cuentaId  Int
+  cuenta    CuentaBancaria @relation(fields: [cuentaId], references: [id]) // ✅ Relación con CuentaBancaria
 
   auditorId Int?
   auditor   Usuario? @relation(name: "UsuarioAuditor", fields: [auditorId], references: [id])
