@@ -1,11 +1,10 @@
 import express from "express";
 import { ConciliacionService } from "../services/conciliacionService.js";
-import { ReporteService } from "../services/reporteService.js"; // ✅ Importación para generación de PDF
-import { DetalleConciliacionData } from "../data/detalleConciliacionData.js"; 
+import prisma from "../data/prisma.js";
 
 const router = express.Router();
 
-// ✅ Obtener todas las conciliaciones
+// Obtener todas las conciliaciones
 router.get("/", async (req, res) => {
   try {
     const conciliaciones = await ConciliacionService.getAllConciliaciones();
@@ -15,7 +14,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Obtener una conciliación por ID
+// Obtener una conciliación por ID
 router.get("/:id", async (req, res) => {
   try {
     const conciliacion = await ConciliacionService.getConciliacionById(parseInt(req.params.id));
@@ -28,8 +27,19 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ Crear una nueva conciliación (solo Contador)
-router.post("/", async (req, res) => {
+// ✅ Obtener movimientos y libro mayor para conciliación
+router.get("/preparar/:cuentaId/:fecha", async (req, res) => {
+  try {
+    const { cuentaId, fecha } = req.params;
+    const detalles = await ConciliacionService.obtenerMovimientosParaConciliacion(Number(cuentaId), fecha);
+    res.json(detalles);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Crear una nueva conciliación (solo Contador)
+router.post("/generar", async (req, res) => {
   try {
     const conciliacion = await ConciliacionService.generarConciliacion(req.body);
     res.json(conciliacion);
@@ -38,53 +48,81 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Actualizar conciliación (Contador puede modificarla si está en estado Pendiente)
-router.put("/:id", async (req, res) => {
+router.get("/cuenta/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const conciliacionActualizada = await ConciliacionService.actualizarConciliacion(parseInt(id), req.body);
-    res.json(conciliacionActualizada);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
+    const conciliaciones = await ConciliacionService.getConciliacionByCuentaId(Number(id));
 
-// ✅ Actualizar estado de la conciliación (Solo Auditor o Director)
-router.put("/estado/:id", async (req, res) => {
-  try {
-    const { estado, usuarioId, rol, observaciones } = req.body;
-
-    if (!["Auditor", "Director"].includes(rol)) {
-      return res.status(403).json({ error: "No tienes permisos para cambiar el estado de la conciliación" });
+    if (!conciliaciones || conciliaciones.length === 0) {
+      return res.status(404).json({ error: "No se encontraron conciliaciones para esta cuenta" });
     }
 
-    const conciliacion = await ConciliacionService.actualizarEstadoConciliacion(
-      parseInt(req.params.id), estado, usuarioId, rol, observaciones
+    res.json(conciliaciones);
+  } catch (error) {
+    console.error("Error al obtener conciliaciones por cuenta:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+
+router.get("/movimientos/:cuentaId/:mes", async (req, res) => {
+  try {
+    const { cuentaId, mes } = req.params;
+
+    if (!cuentaId || !mes) {
+      return res.status(400).json({ error: "Cuenta y mes son requeridos." });
+    }
+
+    // Convertir el mes en formato de fecha
+    const [year, month] = mes.split("-");
+    const inicioMes = new Date(year, month - 1, 1);
+    const finMes = new Date(year, month, 0, 23, 59, 59);
+
+    console.log(`Buscando movimientos de cuenta ${cuentaId} entre ${inicioMes} y ${finMes}`);
+
+    // 🔹 Obtener movimientos de la cuenta
+    const movimientosBanco = await prisma.movimientosCuenta.findMany({
+      where: {
+        cuentaId: parseInt(cuentaId),
+        createdAt: { gte: inicioMes, lte: finMes },
+      },
+      include: { detalles: true },
+    });
+
+    // 🔹 Obtener registros del libro mayor
+    const librosMayor = await prisma.libroMayor.findMany({
+      where: {
+        cuentaId: parseInt(cuentaId),
+        fechaOperacion: { gte: inicioMes, lte: finMes },
+      },
+    });
+
+    console.log("Movimientos Banco:", movimientosBanco.length);
+    console.log("Movimientos Libro Mayor:", librosMayor.length);
+
+    // 🔹 Transformar los datos en un formato uniforme
+    const movimientosFormato = movimientosBanco.flatMap((mov) =>
+      mov.detalles.map((detalle) => ({
+        fechaOperacion: detalle.fechaOperacion,
+        descripcion: detalle.concepto,
+        debe: detalle.importe >= 0 ? detalle.importe : 0,
+        haber: detalle.importe < 0 ? Math.abs(detalle.importe) : 0,
+        tipo: "Banco",
+      }))
     );
 
-    res.json(conciliacion);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
+    const librosFormato = librosMayor.map((libro) => ({
+      fechaOperacion: libro.fechaOperacion,
+      descripcion: libro.descripcion,
+      debe: libro.debe || 0,
+      haber: libro.haber || 0,
+      tipo: "Libro Mayor",
+    }));
 
-// ✅ Actualizar un detalle de conciliación (si es necesario corregir un valor)
-router.put("/detalle/:id", async (req, res) => {
-  try {
-    const detalle = await DetalleConciliacionData.updateDetalleConciliacion(parseInt(req.params.id), req.body);
-    res.json(detalle);
+    return res.json([...movimientosFormato, ...librosFormato]);
   } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// ✅ Generar reporte de conciliación en PDF
-router.get("/reporte/:id", async (req, res) => {
-  try {
-    const { filename } = await ReporteService.generarPDFConciliacion(parseInt(req.params.id));
-    res.download(`./public/reports/${filename}`);
-  } catch (error) {
-    res.status(500).json({ error: "Error al generar el reporte" });
+    console.error("Error al obtener movimientos y libros mayor:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
