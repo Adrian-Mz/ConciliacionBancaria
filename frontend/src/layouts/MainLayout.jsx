@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "../dashboard/Sidebar";
 import Header from "../components/Header";
+import Chatbot from "../components/ChatBot";
 import { useEffect, useState } from "react";
 
 const MainLayout = () => {
@@ -26,6 +27,7 @@ const MainLayout = () => {
         {/* Contenido dinámico */}
         <main className="flex-1 p-6 overflow-auto">
           <Outlet />
+          <Chatbot />
         </main>
       </div>
     </div>
